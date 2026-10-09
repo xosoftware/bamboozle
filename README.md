@@ -3,7 +3,7 @@
 Installable map of Vegas happy hours, brunch, late-night / reverse happy hours, and inKind restaurants.
 Open it on your phone and use **Add to Home Screen** (iPhone: Safari → Share → Add to Home Screen; Android: Chrome → Install BamBoozle).
 
-Live: https://xosoftware.github.io/vegas-happy-hours/
+Live: https://xosoftware.github.io/bamboozle/
 
 Features: category modes, “Use my location” with nearest-first sorting, day / “happening now” / rating / ZIP / text filters,
 inKind badges and filter, works offline after the first load (map tiles you've viewed are cached).
