@@ -1,7 +1,7 @@
 {
-  "name": "Vegas Happy Hours",
-  "short_name": "VegasHH",
-  "description": "Las Vegas happy hours, brunch, late-night specials and inKind restaurants on a map, nearest-first.",
+  "name": "BamBoozle",
+  "short_name": "BamBoozle",
+  "description": "Vegas happy hours, brunch & late night — plus inKind restaurants on a map, nearest-first.",
   "id": "./",
   "start_url": "./",
   "scope": "./",

@@ -1,5 +1,5 @@
-/* Vegas Happy Hours service worker. VERSION is bumped by tools/build.py on every build. */
-const VERSION = 'v2-34f33d1e6f';
+/* BamBoozle service worker. VERSION is bumped by tools/build.py on every build. */
+const VERSION = 'v2-0d9028069c';
 const SHELL_CACHE = 'vhh-shell-' + VERSION;
 const TILE_CACHE = 'vhh-tiles-v2';
 const RUNTIME_CACHE = 'vhh-runtime-v1';

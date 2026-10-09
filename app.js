@@ -1,4 +1,4 @@
-/* Vegas Happy Hours PWA – 2026 redesign */
+/* BamBoozle PWA – Vegas happy hours, brunch & late night */
 function startApp(DATA){
 "use strict";
 
@@ -205,13 +205,16 @@ function dealLine(v,k){var x=v[k];var t=k==='br'?(present(x.spec)?x.spec:x.bname
   return String(t||'').replace(/\s*\[[^\]]*\]\s*/g,' ').trim()}
 function priceHL(s){return esc(s).replace(/(\$\s?\d[\d,]*(?:\.\d+)?(?:\s?[-–]\s?\$?\d[\d,]*(?:\.\d+)?)?|\d+\s?%\s?off|half[- ]off|half[- ]price|bottomless|BOGO)/gi,'<b>$1</b>')}
 function cardHtml(v){
-  var c=cats(v),k=c.length>1?'multi':c[0],d=dist(v),now=isNow(v);
+  var c=cats(v),d=dist(v),now=isNow(v);
   var h='<article class="card'+(v.id===activeId?' active':'')+'" data-id="'+v.id+'" role="listitem" tabindex="0" aria-label="'+esc(v.name)+'">';
-  h+='<div class="thumb '+k+'">'+icon(c.length>1?(c.indexOf('hh')>=0?'hh':c[0]):c[0])+'</div><div class="body">';
+  h+='<div class="body">';
   h+='<div class="r1"><h3>'+esc(v.name)+'</h3>'+(d!=null?'<span class="dist">'+fmtDist(d,v)+'</span>':'')+'</div>';
   var r2=[];if(v.rating!=null)r2.push('<span class="rate">'+icon('star')+v.rating+'</span>'+(v.reviews?' ('+fmtNum(v.reviews)+')':''));
   if(present(v.loc))r2.push(esc(v.loc));else if(v.zip)r2.push(esc(v.zip));
   h+='<div class="r2">'+r2.join(' · ')+'</div>';
+  var tk=c.filter(function(x){return present(v[x].times)||present(v[x].days)});
+  if(tk.length){h+='<div class="when">'+icon('clock')+'<span>'+tk.slice(0,2).map(function(x){var y=v[x];return (c.length>1?'<span class="c-'+x+'">'+CATN[x].split(' ')[0]+'</span> ':'')+esc([present(y.days)?y.days:'',present(y.times)?firstSeg(y.times):''].filter(Boolean).join(' · '))}).join('  ·  ')+'</span></div>'}
+  var dl=dealLine(v,c[0]);if(dl)h+='<div class="deal">'+priceHL(dl)+'</div>';
   var bd='';if(now)bd+='<span class="b now">Now</span>';
   c.forEach(function(x){bd+='<span class="b '+x+'">'+CATN[x]+'</span>'});
   if(v.ik)bd+='<span class="b ik'+(onIK(v)?'':' unc')+'">'+(onIK(v)?'inKind':'inKind?')+'</span>';
@@ -219,9 +222,6 @@ function cardHtml(v){
   if(unv)bd+='<span class="b muted" title="Aggregator/editorial-only listing">Unverified</span>';
   if(v.approx)bd+='<span class="b muted" title="'+esc(v.q)+'">Approx. pin</span>';
   h+='<div class="badges">'+bd+'</div>';
-  var tk=c.filter(function(x){return present(v[x].times)||present(v[x].days)});
-  if(tk.length){h+='<div class="when">'+icon('clock')+'<span>'+tk.slice(0,2).map(function(x){var y=v[x];return (c.length>1?'<span class="c-'+x+'">'+CATN[x].split(' ')[0]+'</span> ':'')+esc([present(y.days)?y.days:'',present(y.times)?firstSeg(y.times):''].filter(Boolean).join(' · '))}).join('  ·  ')+'</span></div>'}
-  var dl=dealLine(v,c[0]);if(dl)h+='<div class="deal">'+priceHL(dl)+'</div>';
   return h+'</div></article>';
 }
 function renderList(){

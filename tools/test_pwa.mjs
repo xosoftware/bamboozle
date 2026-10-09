@@ -1,4 +1,4 @@
-// Headless test for the Vegas Happy Hours PWA (2026 redesign).
+// Headless test for the BamBoozle PWA (2026 redesign).
 // Usage: python3 -m http.server 8765 &  node tools/test_pwa.mjs [url] [shotDir]
 import pkg from '/node_modules/playwright-core/index.js'; const { chromium, devices } = pkg;
 const URL = process.argv[2] || 'http://127.0.0.1:8765/';
@@ -27,8 +27,13 @@ await session(devices['iPhone 13'], async (p, ctx) => {
   for (const k in EXPECT) ok(c[k] === EXPECT[k], `count ${k}=${c[k]} (expect ${EXPECT[k]})`);
   ok((await st(p)).vis === 738 && (await st(p)).onMap === 733, 'all 738 listed / 733 pins on map at start');
   const sw = await p.evaluate(async () => { const r = await navigator.serviceWorker.ready; return !!r.active; }); ok(sw, 'service worker active');
-  const man = await p.evaluate(async () => { const m = await (await fetch('manifest.webmanifest')).json(); return m.display + ' ' + m.icons.length; }); ok(man === 'standalone 4', 'manifest ' + man);
+  const man = await p.evaluate(async () => { const m = await (await fetch('manifest.webmanifest')).json(); return {d:m.display, n:m.icons.length, name:m.name, short:m.short_name}; });
+  ok(man.d === 'standalone' && man.n === 4, 'manifest ' + man.d + ' ' + man.n);
+  ok(man.name === 'BamBoozle' && man.short === 'BamBoozle', 'manifest name BamBoozle (' + man.name + '/' + man.short + ')');
+  ok(await p.evaluate(() => document.title === 'BamBoozle' && document.querySelector('meta[name="apple-mobile-web-app-title"]').content === 'BamBoozle'), 'document title / apple title BamBoozle');
+  ok(await p.evaluate(() => document.querySelector('#topbar h1').textContent === 'BamBoozle'), 'header brand BamBoozle');
   ok(await p.evaluate(() => document.getElementById('a2hs').classList.contains('show')), 'iOS add-to-home hint shown');
+  ok(await p.evaluate(() => document.querySelector('#a2hs b').textContent.includes('BamBoozle')), 'iOS hint mentions BamBoozle');
   for (const [m, n] of [['hh',657],['br',110],['ln',167],['all',738]]) { const s = await clickMode(p, m); ok(s.vis === n, `mode ${m}: ${s.vis}`); }
   await p.click('#ikChip'); await p.waitForTimeout(250); ok((await st(p)).vis === 76, 'inKind chip -> ' + (await st(p)).vis);
   await p.click('#ikChip'); await p.waitForTimeout(250);
@@ -55,12 +60,20 @@ await session(devices['iPhone 13'], async (p, ctx) => {
   await p.click('#loc'); await p.waitForTimeout(2500);
   const near = await p.evaluate(() => [...document.querySelectorAll('#list .card')].slice(0, 3).map(e => e.querySelector('h3').textContent + ' ' + (e.querySelector('.dist')||{}).textContent));
   ok(near.length === 3 && near.every(t => /mi$/.test(t)), 'nearest-first: ' + near.join(' | '));
+  ok(await p.evaluate(() => document.querySelectorAll('#list .card .thumb').length === 0 && document.querySelectorAll('#list .card .body').length > 0), 'list cards have no thumb tile');
+  ok(await p.evaluate(() => {
+    const c = document.querySelector('#list .card .body'); if (!c) return false;
+    const kids = [...c.children].map(e => e.className.split(' ')[0]);
+    const bi = kids.indexOf('badges');
+    return bi === kids.length - 1 && kids.indexOf('r2') < bi && (kids.indexOf('deal') === -1 || kids.indexOf('deal') < bi);
+  }), 'badges are last in card body');
   // tap targets
   const small = await p.evaluate(() => [...document.querySelectorAll('#topbar button, .fab, #sheet .pill-btn')].filter(e => e.offsetParent && e.getBoundingClientRect().height < 34).map(e => e.id || e.className));
   ok(small.length === 0, 'tap targets >= 34px tall in top bar (' + small.join(',') + ')');
   // screenshot: list sheet half open over map (dismiss install hint + toast first)
   await p.click('#a2hsClose'); await p.evaluate(() => { document.getElementById('chips').scrollLeft = 0; }); await p.waitForTimeout(4500);
   await p.screenshot({path: DIR + '/redesign_mobile_list.png'});
+  await p.screenshot({path: DIR + '/bamboozle_mobile.png'});
   // sheet states
   for (const s of ['peek', 'full', 'half']) { await p.evaluate(s => __vhh.sheet(s), s); await p.waitForTimeout(500); }
   ok(await p.evaluate(() => __vhh.sheet()) === 'half', 'sheet snaps peek/full/half');

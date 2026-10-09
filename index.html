@@ -4,17 +4,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0b12">
 <meta name="color-scheme" content="dark light">
-<meta name="description" content="Las Vegas happy hours, brunch, late-night specials and inKind restaurants on a map, sorted nearest-first.">
+<meta name="description" content="BamBoozle — Vegas happy hours, brunch & late night, plus inKind restaurants on a map, sorted nearest-first.">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="VegasHH">
+<meta name="apple-mobile-web-app-title" content="BamBoozle">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 <link rel="preload" href="fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
-<title>Vegas Happy Hours</title>
+<title>BamBoozle</title>
 <script>(function(){try{var t=localStorage.getItem('vhhTheme')||'dark';if(t==='system')t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t)}catch(e){}})();</script>
 <link rel="stylesheet" href="vendor/leaflet.css">
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
@@ -48,7 +48,7 @@
 <div id="map" aria-label="Map of venues"></div>
 
 <header id="topbar">
- <div class="brand"><img src="icons/icon-192.png" alt="" width="36" height="36"><div><h1>Vegas Happy Hours</h1><p id="sub">Happy hour · brunch · late night</p></div></div>
+ <div class="brand"><img src="icons/icon-192.png" alt="" width="36" height="36"><div><h1>BamBoozle</h1><p id="sub">Vegas happy hours, brunch &amp; late night</p></div></div>
  <div class="searchrow">
   <label class="search glass" for="q">
    <svg class="ic"><use href="#i-search"/></svg>
@@ -66,7 +66,7 @@
   <button data-mode="ln" role="radio" aria-checked="false"><svg class="ic"><use href="#i-ln"/></svg><span class="lbl">Late</span></button>
  </div>
  <div class="chips" id="chips" role="toolbar" aria-label="Quick filters">
-  <button id="installBtn" class="chip install" hidden><svg class="ic"><use href="#i-download"/></svg>Install app</button>
+  <button id="installBtn" class="chip install" hidden><svg class="ic"><use href="#i-download"/></svg>Install BamBoozle</button>
   <button id="now" class="chip" aria-pressed="false" title="Uses Las Vegas time and the parsed days/times"><span class="live"></span>Happening now</button>
   <button id="ikChip" class="chip" aria-pressed="false"><svg class="ic"><use href="#i-gift"/></svg>inKind</button>
   <button id="r4Chip" class="chip" aria-pressed="false"><svg class="ic star"><use href="#i-star"/></svg>4.0+</button>
@@ -84,18 +84,18 @@
   </div>
  </div>
  <div id="list" role="list">
-  <div class="card skel"><div class="thumb"></div><div class="body"><i></i><i></i><i></i></div></div>
-  <div class="card skel"><div class="thumb"></div><div class="body"><i></i><i></i><i></i></div></div>
-  <div class="card skel"><div class="thumb"></div><div class="body"><i></i><i></i><i></i></div></div>
-  <div class="card skel"><div class="thumb"></div><div class="body"><i></i><i></i><i></i></div></div>
-  <div class="card skel"><div class="thumb"></div><div class="body"><i></i><i></i><i></i></div></div>
+  <div class="card skel"><div class="body"><i></i><i></i><i></i></div></div>
+  <div class="card skel"><div class="body"><i></i><i></i><i></i></div></div>
+  <div class="card skel"><div class="body"><i></i><i></i><i></i></div></div>
+  <div class="card skel"><div class="body"><i></i><i></i><i></i></div></div>
+  <div class="card skel"><div class="body"><i></i><i></i><i></i></div></div>
  </div>
 </section>
 
 <button id="loc" class="fab glass" aria-label="Use my location"><svg class="ic"><use href="#i-locate"/></svg></button>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<div id="a2hs" class="glass" role="note"><img src="icons/icon-192.png" alt="" width="40" height="40"><div><b>Install the app</b><span>Tap <svg class="ic inl"><use href="#i-share"/></svg> Share, then <b>Add to Home Screen</b></span></div><button id="a2hsClose" class="iconbtn sm" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button></div>
+<div id="a2hs" class="glass" role="note"><img src="icons/icon-192.png" alt="" width="40" height="40"><div><b>Install BamBoozle</b><span>Tap <svg class="ic inl"><use href="#i-share"/></svg> Share, then <b>Add to Home Screen</b></span></div><button id="a2hsClose" class="iconbtn sm" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button></div>
 
 <div id="scrim" hidden></div>
 <section id="detail" role="dialog" aria-modal="false" aria-labelledby="dName" hidden>
@@ -132,7 +132,7 @@
     <li><span class="mk hh approx"><i></i></span>Dashed ring = approximate spot</li>
     <li><span class="you-dot"></span>You</li>
    </ul></div>
-  <button id="installBtn2" class="btn ghost wide" hidden><svg class="ic"><use href="#i-download"/></svg>Install app</button>
+  <button id="installBtn2" class="btn ghost wide" hidden><svg class="ic"><use href="#i-download"/></svg>Install BamBoozle</button>
   <p class="about" id="about"></p>
  </div>
  <div class="ffoot"><button id="reset" class="btn ghost">Reset all</button><button id="fApply" class="btn primary">Show spots</button></div>

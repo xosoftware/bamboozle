@@ -1,4 +1,4 @@
-"""Build helper for the Vegas Happy Hours PWA.
+"""Build helper for the BamBoozle PWA.
 index.html / app.css / app.js are hand-maintained sources (2026 redesign).
 Usage:  python3 tools/build.py [--from-html /path/to/vegas_hh_map_inkind.html]
 - --from-html: re-extract data.json from a regenerated single-file map (uses app_src/template.html to locate the data blob).
