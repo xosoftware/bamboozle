@@ -93,7 +93,7 @@ function pinBg(v){var c=shown(v);if(c.length===1)return '';
   var st=[],w=100/c.length;c.forEach(function(k,i){st.push(COL[k]+' '+(i*w).toFixed(1)+'% '+((i+1)*w).toFixed(1)+'%')});return ' style="background:conic-gradient('+st.join(',')+')"'}
 function iconFor(v){var k=kindOf(v);
   return L.divIcon({className:'',html:'<div class="mk '+k+(v.approx?' approx':'')+(onIK(v)?' ik':'')+(v.id===activeId?' on':'')+'" data-cats="'+cats(v).join(' ')+'"><i'+pinBg(v)+'></i></div>',iconSize:[28,28],iconAnchor:[14,14]})}
-var CATN={hh:'Happy hour',br:'Brunch',ln:'Late night'},CATL={hh:'Happy hour',br:'Brunch',ln:'Late night / reverse happy hour'};
+var CATN={hh:'Happy Hour',br:'Brunch',ln:'Late night'},CATL={hh:'Happy Hour',br:'Brunch',ln:'Late night / reverse happy hour'};
 DATA.forEach(function(v,i){v.id=i;
   if(v.lat!=null){
     var m=L.marker([v.lat,v.lng],{icon:iconFor(v),title:v.name,keyboard:true,riseOnHover:true});
@@ -496,7 +496,7 @@ var nHH=DATA.filter(function(v){return v.hh}).length,nBR=DATA.filter(function(v)
 var nIK=DATA.filter(onIK).length,nApx=DATA.filter(function(v){return v.approx}).length;
 $('sub').textContent=DATA.length+' spots · happy hour, brunch & late night';
 $('about').textContent=DATA.length+' venues: '+nHH+' happy hour, '+nBR+' brunch, '+nLN+' late night ('+nBoth+' on 2+ lists), '+nIK+' on inKind, '+nApx+' approximate pins. Late-night windows after midnight belong to the previous evening. Times use Las Vegas time. Data gathered from venue sites and third-party guides (Oct 2026) — many entries are unverified; confirm before you go.';
-modeBtns.forEach(function(b){var m=b.getAttribute('data-mode'),n={hh:nHH,br:nBR,ln:nLN}[m];b.title=n+' venues · tap to toggle';b.setAttribute('aria-label',({hh:'Happy hour',br:'Brunch',ln:'Late night'})[m]+' ('+n+')')});
+modeBtns.forEach(function(b){var m=b.getAttribute('data-mode'),n={hh:nHH,br:nBR,ln:nLN}[m];b.title=n+' venues · tap to toggle';b.setAttribute('aria-label',({hh:'Happy Hour',br:'Brunch',ln:'Late night'})[m]+' ('+n+')')});
 layout();setSheet('half',true);
 refresh();syncRating();
 requestAnimationFrame(syncMode);

@@ -46,6 +46,18 @@ await session(devices['iPhone 13'], async (p, ctx) => {
   let pressed = await modePressed(p);
   ok(pressed.hh && pressed.br && pressed.ln, 'all three categories ON by default ' + JSON.stringify(pressed));
   ok((await st(p)).vis === 738, 'all categories on -> 738');
+  ok(await p.evaluate(() => {
+    const lbl = document.querySelector('#mode button[data-mode=hh] .lbl')?.textContent.trim();
+    return lbl === 'Happy Hour';
+  }), 'Happy Hour label on category toggle');
+  // legend lives in filters sheet
+  await p.click('#filtertoggle'); await p.waitForTimeout(400);
+  ok(await p.evaluate(() => [...document.querySelectorAll('#filters .legend li')].some(e => e.textContent.trim() === 'Happy Hour')), 'Happy Hour in map key legend');
+  await p.click('#fApply'); await p.waitForTimeout(300);
+  ok(await p.evaluate(() => {
+    const card = [...document.querySelectorAll('#list .card .badges .b.hh')].find(e => e.textContent.trim() === 'Happy Hour');
+    return !!card;
+  }), 'card badge text Happy Hour');
   const KS_OK = (pr, keep) => ['hh','br','ln'].every(k => pr[k] === (k===keep));
   for (const [m, n] of [['hh',657],['br',110],['ln',176]]) {
     const only = {hh:false,br:false,ln:false}; only[m]=true;
