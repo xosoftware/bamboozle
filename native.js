@@ -96,7 +96,7 @@ var BB={
     schedule:function(items){var ln=P('LocalNotifications');if(!ln)return Promise.resolve(0);
       return BB.notif.clear().then(function(){
         if(!items.length)return 0;
-        return ln.schedule({notifications:items.map(function(x){return {id:x.id,title:x.title,body:x.body,schedule:{at:x.at,allowWhileIdle:true},extra:x.extra||null}})}).then(function(){return items.length});
+        return ln.schedule({notifications:items.map(function(x){return {id:x.id,title:x.title,body:x.body,schedule:{at:x.at,allowWhileIdle:true},isExactNotification:false,extra:x.extra||null}})}).then(function(){return items.length});
       });
     },
     onTap:function(fn){var ln=P('LocalNotifications');if(ln)ln.addListener('localNotificationActionPerformed',function(a){fn(a&&a.notification&&a.notification.extra)})}
