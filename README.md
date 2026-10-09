@@ -15,6 +15,11 @@ Design (Oct 2026 redesign): dark neon theme by default with light / system modes
 OpenFreeMap vector basemap (Dark, tinted, and Positron) rendered with MapLibre GL inside Leaflet, with an OSM raster fallback when WebGL
 isn't available. Mobile uses a draggable bottom sheet (peek / half / full) and a detail sheet; desktop uses side panels.
 
+Also: **Saved spots** (heart, on-device), **Share** (native share sheet / Web Share / clipboard), `#spot=<name|address>` deep links,
+a one-time data-accuracy notice, and `privacy.html` / `support.html` (used as the App Store / Play privacy + support URLs).
+`native.js` is a feature-detecting bridge: inside the Capacitor app (repo `xosoftware/bamboozle-app`) it uses native geolocation,
+haptics, share, status bar, splash, Apple/Google Maps and opt-in local notifications; in the browser it falls back to web APIs.
+
 ## Updating
 - **App code:** `index.html`, `app.css`, `app.js` are edited directly. Run `python3 tools/build.py` afterwards to bump the service-worker cache version.
 - **Data only:** replace `data.json` (array of venue records), then run `python3 tools/build.py`, commit, push.

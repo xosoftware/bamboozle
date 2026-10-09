@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="BamBoozle">
 <meta name="application-name" content="BamBoozle">
 <meta property="og:site_name" content="BamBoozle">
-<link rel="manifest" href="manifest.webmanifest?v=05e97dd725">
+<link rel="manifest" href="manifest.webmanifest?v=2b48c30e48">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
@@ -45,6 +45,8 @@
  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></symbol>
  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2.5 2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9Z"/></symbol>
+ <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.7 3.8 4.5 7.2 4.5c2 0 3.6 1.1 4.8 2.8 1.2-1.7 2.8-2.8 4.8-2.8 3.4 0 5.6 3.2 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4Z"/></symbol>
+ <symbol id="i-heart-f" viewBox="0 0 24 24"><path fill="currentColor" d="M12 20.5s-7.5-4.6-9.2-9.4C1.6 7.7 3.8 4.5 7.2 4.5c2 0 3.6 1.1 4.8 2.8 1.2-1.7 2.8-2.8 4.8-2.8 3.4 0 5.6 3.2 4.4 6.6-1.7 4.8-9.2 9.4-9.2 9.4Z"/></symbol>
  <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
 </defs></svg>
 
@@ -69,6 +71,7 @@
  <div class="chips" id="chips" role="toolbar" aria-label="Quick filters">
   <button id="installBtn" class="chip install" hidden><svg class="ic"><use href="#i-download"/></svg>Install BamBoozle</button>
   <button id="now" class="chip" aria-pressed="false" title="Uses Las Vegas time and the parsed days/times"><span class="live"></span>Happening now</button>
+  <button id="savedChip" class="chip" aria-pressed="false"><svg class="ic"><use href="#i-heart"/></svg>Saved<span id="savedN" class="cnt"></span></button>
   <button id="ikChip" class="chip" aria-pressed="false"><svg class="ic"><use href="#i-gift"/></svg>inKind</button>
   <button id="r4Chip" class="chip" aria-pressed="false"><svg class="ic star"><use href="#i-star"/></svg>4.0+</button>
   <span class="chipsep" aria-hidden="true"></span>
@@ -98,6 +101,8 @@
 
 <div id="a2hs" class="glass" role="note"><img src="icons/icon-192.png" alt="" width="40" height="40"><div><b>Install BamBoozle</b><span>Tap <svg class="ic inl"><use href="#i-share"/></svg> Share, then <b>Add to Home Screen</b></span></div><button id="a2hsClose" class="iconbtn sm" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button></div>
 
+<div id="disc" class="glass" role="note" hidden><div><b>Heads up</b><span>Deals and hours change often. Listings come from public sources and may be out of date — confirm with the venue before you go.</span></div><button id="discOk" class="btn primary">Got it</button></div>
+
 <div id="scrim" hidden></div>
 <section id="detail" role="dialog" aria-modal="false" aria-labelledby="dName" hidden>
  <div class="detail-grab" id="dgrab"><span class="handle-bar"></span><span class="mini" id="dMini" aria-hidden="true"></span></div>
@@ -119,6 +124,9 @@
    <label class="switch"><span><b>On 2+ lists</b><small>e.g. Happy Hour and brunch</small></span><input type="checkbox" id="bothOnly" role="switch"><i></i></label>
    <label class="switch"><span><b>Exact addresses</b><small>Hide approximate pins (casino-only address or ZIP center)</small></span><input type="checkbox" id="exactOnly" role="switch"><i></i></label>
   </div>
+  <div class="fgroup" id="alertsGroup" hidden><h3>Alerts</h3>
+   <label class="switch"><span><b>Saved spot alerts</b><small>A heads-up 15 minutes before happy hour, brunch or a late-night deal starts at one of your saved spots. Scheduled on this device only.</small></span><input type="checkbox" id="alertsOn" role="switch"><i></i></label>
+  </div>
   <div class="fgroup"><h3>Appearance</h3>
    <div class="seg small" id="themeSeg" role="radiogroup" aria-label="Theme">
     <button data-t="dark" role="radio">Dark</button><button data-t="light" role="radio">Light</button><button data-t="system" role="radio">System</button>
@@ -135,6 +143,10 @@
    </ul></div>
   <button id="installBtn2" class="btn ghost wide" hidden><svg class="ic"><use href="#i-download"/></svg>Install BamBoozle</button>
   <p class="about" id="about"></p>
+  <div class="fgroup disclaimer"><h3>About these listings</h3>
+   <p class="about">Deals, prices, days and hours change often and many listings come from third-party guides, so they may be out of date. Always confirm with the venue before you go. Ratings are approximate. BamBoozle is independent and not affiliated with any venue or with inKind. Please drink responsibly — 21+ for alcohol.</p>
+   <p class="about links"><a href="https://xosoftware.github.io/bamboozle/privacy.html" target="_blank" rel="noopener">Privacy policy</a> · <a href="https://xosoftware.github.io/bamboozle/support.html" target="_blank" rel="noopener">Support</a></p>
+  </div>
  </div>
  <div class="ffoot"><button id="reset" class="btn ghost">Reset all</button><button id="fApply" class="btn primary">Show spots</button></div>
 </section>
@@ -143,5 +155,6 @@
 <script src="vendor/leaflet.markercluster.js"></script>
 <script src="vendor/maplibre-gl.js"></script>
 <script src="vendor/leaflet-maplibre-gl.js"></script>
+<script src="native.js"></script>
 <script src="app.js"></script>
 </body></html>

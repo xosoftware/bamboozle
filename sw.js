@@ -1,12 +1,12 @@
 /* BamBoozle service worker. VERSION is bumped by tools/build.py on every build. */
-const VERSION = 'v2-05e97dd725';
+const VERSION = 'v2-2b48c30e48';
 const SHELL_CACHE = 'vhh-shell-' + VERSION;
 const TILE_CACHE = 'vhh-tiles-v2';
 const RUNTIME_CACHE = 'vhh-runtime-v1';
 const MAX_TILES = 2500;      // vector tiles + glyphs + sprites (~20-40 MB worst case)
 const MAX_RUNTIME = 60;
 const SHELL = [
-  './', 'index.html', 'app.css', 'app.js', 'fonts/inter-latin-wght.woff2', 'data.json', 'manifest.webmanifest',
+  './', 'index.html', 'app.css', 'native.js', 'app.js', 'fonts/inter-latin-wght.woff2', 'data.json', 'manifest.webmanifest',
   'vendor/leaflet.css', 'vendor/leaflet.js', 'vendor/maplibre-gl.css', 'vendor/maplibre-gl.js', 'vendor/leaflet-maplibre-gl.js', 'vendor/MarkerCluster.css', 'vendor/leaflet.markercluster.js',
   'vendor/images/layers.png', 'vendor/images/layers-2x.png', 'vendor/images/marker-icon.png', 'vendor/images/marker-icon-2x.png', 'vendor/images/marker-shadow.png',
   'icons/favicon-32.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/icon-maskable-192.png', 'icons/apple-touch-icon.png'

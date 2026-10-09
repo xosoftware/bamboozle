@@ -11,6 +11,10 @@ function safeUrl(u){return /^https?:\/\//i.test(u||'')?u:null}
 function icon(n,cls){return '<svg class="ic'+(cls?' '+cls:'')+'" aria-hidden="true"><use href="#i-'+n+'"/></svg>'}
 var mq=window.matchMedia('(min-width:900px)');
 function isDesk(){return mq.matches}
+var BB=window.BB||{isNative:false,platform:'web',haptic:function(){},setTheme:function(){},ready:function(){},onBack:function(){},onResume:function(){},canShare:function(){return false},
+  notif:{supported:function(){return false}},dirUrl:null,openExternal:function(u){window.open(u,'_blank','noopener')},
+  getPosition:function(){return new Promise(function(res,rej){if(!navigator.geolocation){var e=new Error('unsupported');e.code=0;rej(e);return}navigator.geolocation.getCurrentPosition(function(p){res([p.coords.latitude,p.coords.longitude])},rej,{enableHighAccuracy:true,timeout:15000,maximumAge:60000})})}};
+var SITE='https://xosoftware.github.io/bamboozle/';
 
 /* ---------- map + theme ---------- */
 var map=L.map('map',{maxZoom:20,minZoom:3,zoomControl:false,attributionControl:false,tap:true}).setView(STRIP,11);
@@ -55,6 +59,7 @@ function applyTheme(){
   document.documentElement.setAttribute('data-theme',t);
   var mc=document.querySelector('meta[name=theme-color]');if(mc)mc.content=t==='dark'?'#0b0b12':'#f3f3f8';
   if(t!==curTheme){curTheme=t;setBasemap(t)}
+  BB.setTheme(t);
   var tb=$('themeBtn');tb.innerHTML=icon(t==='dark'?'sun':'moon');tb.setAttribute('aria-label',t==='dark'?'Switch to light mode':'Switch to dark mode');
   Array.prototype.forEach.call($('themeSeg').children,function(b){var on=b.getAttribute('data-t')===themePref();b.classList.toggle('on',on);b.setAttribute('aria-checked',on)});
 }
@@ -82,7 +87,13 @@ function loadModes(){
   }catch(e){return defaultModes()}
 }
 function saveModes(){try{localStorage.setItem('vhhModes',JSON.stringify(state.modes))}catch(e){}}
-function freshState(){return {modes:defaultModes(),q:'',zip:'',days:{},now:false,minRating:0,exactOnly:false,bothOnly:false,ikOnly:false}}
+function freshState(){return {modes:defaultModes(),q:'',zip:'',days:{},now:false,minRating:0,exactOnly:false,bothOnly:false,ikOnly:false,savedOnly:false}}
+/* ---------- saved spots (on-device only) ---------- */
+function vkey(v){return v.name+'|'+v.addr}
+var saved=(function(){try{var o=JSON.parse(localStorage.getItem('bbSaved')||'{}');return o&&typeof o==='object'?o:{}}catch(e){return {}}})();
+function isSaved(v){return !!saved[vkey(v)]}
+function persistSaved(){try{localStorage.setItem('bbSaved',JSON.stringify(saved))}catch(e){}}
+function savedCount(){var n=0;DATA.forEach(function(v){if(isSaved(v))n++});return n}
 var state=freshState();state.modes=loadModes();
 var KS=['hh','br','ln'],COL={hh:'var(--hh)',br:'var(--br)',ln:'var(--ln)'};
 function has(v){return KS.filter(function(k){return !!v[k]})}
@@ -105,6 +116,7 @@ DATA.forEach(function(v,i){v.id=i;
 });
 
 function dirUrl(v){
+  if(BB.dirUrl)return BB.dirUrl(v);
   var dest=v.approx?(v.name+', '+v.addr):(v.lat+','+v.lng);
   if(v.lat==null)dest=v.name+', '+v.addr;
   return 'https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(dest);
@@ -147,7 +159,7 @@ Object.keys(zips).sort().forEach(function(z){var o=document.createElement('optio
 var today=vegasNow().day;
 DAYN.forEach(function(d,i){var b=document.createElement('button');b.className='chip'+(i===today?' today':'');b.textContent=d;b.setAttribute('aria-pressed','false');
   if(i===today)b.title='Today in Las Vegas';
-  b.onclick=function(){state.days[i]=!state.days[i];b.setAttribute('aria-pressed',!!state.days[i]);refresh()};$('days').appendChild(b)});
+  b.onclick=function(){BB.haptic('select');state.days[i]=!state.days[i];b.setAttribute('aria-pressed',!!state.days[i]);refresh()};$('days').appendChild(b)});
 var qT=null;
 $('q').addEventListener('input',function(){var val=this.value;$('qclear').hidden=!val;clearTimeout(qT);qT=setTimeout(function(){state.q=val.trim().toLowerCase();refresh();if(!isDesk()&&state.q&&sheetState==='peek')setSheet('half')},120)});
 $('q').addEventListener('keydown',function(e){if(e.key==='Enter'){this.blur();if(!isDesk())setSheet('half')}});
@@ -155,15 +167,17 @@ $('qclear').onclick=function(e){e.preventDefault();$('q').value='';this.hidden=t
 $('zip').onchange=function(){state.zip=this.value;refresh()};
 function syncRating(){Array.prototype.forEach.call($('rating').children,function(b){var on=parseFloat(b.getAttribute('data-r'))===state.minRating;b.classList.toggle('on',on);b.setAttribute('aria-checked',on)});$('r4Chip').setAttribute('aria-pressed',state.minRating>=4)}
 Array.prototype.forEach.call($('rating').children,function(b){b.onclick=function(){state.minRating=parseFloat(b.getAttribute('data-r'));syncRating();refresh()}});
-$('r4Chip').onclick=function(){state.minRating=state.minRating>=4?0:4;syncRating();refresh()};
+$('r4Chip').onclick=function(){BB.haptic();state.minRating=state.minRating>=4?0:4;syncRating();refresh()};
 $('exactOnly').onchange=function(){state.exactOnly=this.checked;refresh()};
 $('bothOnly').onchange=function(){state.bothOnly=this.checked;refresh()};
 function syncIK(){$('ikOnly').checked=state.ikOnly;$('ikChip').setAttribute('aria-pressed',state.ikOnly)}
 $('ikOnly').onchange=function(){state.ikOnly=this.checked;syncIK();refresh()};
-$('ikChip').onclick=function(){state.ikOnly=!state.ikOnly;syncIK();refresh()};
+$('ikChip').onclick=function(){BB.haptic();state.ikOnly=!state.ikOnly;syncIK();refresh()};
+function syncSaved(){var n=savedCount(),c=$('savedChip');c.setAttribute('aria-pressed',state.savedOnly);$('savedN').textContent=n?String(n):'';c.setAttribute('aria-label','Saved spots ('+n+')')}
+$('savedChip').onclick=function(){BB.haptic();state.savedOnly=!state.savedOnly;syncSaved();refresh();if(state.savedOnly&&!isDesk()&&sheetState==='peek')setSheet('half')};
 var modeBtns=Array.prototype.slice.call($('mode').querySelectorAll('button'));
 modeBtns.forEach(function(b){b.onclick=function(){
-  var m=b.getAttribute('data-mode');
+  var m=b.getAttribute('data-mode');BB.haptic();
   state.modes[m]=!state.modes[m];saveModes();syncMode();refresh();
 }});
 function syncMode(){
@@ -172,9 +186,9 @@ function syncMode(){
     b.classList.toggle('on',on);b.setAttribute('aria-pressed',on?'true':'false');
   });
 }
-$('now').onclick=function(){state.now=!state.now;this.setAttribute('aria-pressed',state.now);this.classList.toggle('on',state.now);refresh()};
+$('now').onclick=function(){BB.haptic();state.now=!state.now;this.setAttribute('aria-pressed',state.now);this.classList.toggle('on',state.now);refresh()};
 function resetAll(){
-  state=freshState();saveModes();syncMode();syncRating();syncIK();
+  state=freshState();saveModes();syncMode();syncRating();syncIK();syncSaved();
   $('q').value='';$('qclear').hidden=true;$('zip').value='';$('exactOnly').checked=false;$('bothOnly').checked=false;
   $('now').setAttribute('aria-pressed','false');$('now').classList.remove('on');
   Array.prototype.forEach.call($('days').children,function(b){b.setAttribute('aria-pressed','false')});
@@ -182,10 +196,11 @@ function resetAll(){
 }
 $('reset').onclick=resetAll;
 
-function activeFilterCount(){var n=0,k;if(state.zip)n++;if(state.minRating)n++;if(state.exactOnly)n++;if(state.bothOnly)n++;if(state.ikOnly)n++;if(state.now)n++;for(k in state.days)if(state.days[k])n++;return n}
+function activeFilterCount(){var n=0,k;if(state.zip)n++;if(state.minRating)n++;if(state.exactOnly)n++;if(state.bothOnly)n++;if(state.ikOnly)n++;if(state.savedOnly)n++;if(state.now)n++;for(k in state.days)if(state.days[k])n++;return n}
 
 function passes(v){
   var act=cats(v);if(!act.length)return false;
+  if(state.savedOnly&&!isSaved(v))return false;
   if(state.bothOnly&&has(v).length<2)return false;
   if(state.ikOnly&&!onIK(v))return false;
   if(state.zip&&v.zip!==state.zip)return false;
@@ -225,7 +240,7 @@ function cardHtml(v){
   var c=cats(v),d=dist(v),now=isNow(v);
   var h='<article class="card'+(v.id===activeId?' active':'')+'" data-id="'+v.id+'" role="listitem" tabindex="0" aria-label="'+esc(v.name)+'">';
   h+='<div class="body">';
-  h+='<div class="r1"><h3>'+esc(v.name)+'</h3>'+(d!=null?'<span class="dist">'+fmtDist(d,v)+'</span>':'')+'</div>';
+  h+='<div class="r1"><h3>'+esc(v.name)+'</h3>'+(isSaved(v)?'<span class="sv" title="Saved">'+icon('heart-f')+'<span class="sr">Saved</span></span>':'')+(d!=null?'<span class="dist">'+fmtDist(d,v)+'</span>':'')+'</div>';
   var r2=[];if(v.rating!=null)r2.push('<span class="rate">'+icon('star')+v.rating+'</span>'+(v.reviews?' ('+fmtNum(v.reviews)+')':''));
   if(present(v.loc))r2.push(esc(v.loc));else if(v.zip)r2.push(esc(v.zip));
   h+='<div class="r2">'+r2.join(' · ')+'</div>';
@@ -245,8 +260,10 @@ function renderList(){
   else sorted.sort(function(a,b){return a.name.localeCompare(b.name)});
   rendered=0;$('list').innerHTML='';$('list').scrollTop=0;
   if(!sorted.length){
+    if(state.savedOnly&&!savedCount()){$('list').innerHTML='<div class="empty"><div class="em-ic">'+icon('heart')+'</div><h3>No saved spots yet</h3><p>Open any spot and tap <b>Save</b> to keep it here. Saved spots stay on this device.</p><button class="btn primary" id="emptyReset">Show all spots</button></div>';$('emptyReset').onclick=resetAll}
+    else{
     $('list').innerHTML='<div class="empty"><div class="em-ic">'+icon(state.now?'clock':'search')+'</div><h3>No spots match</h3><p>'+(state.now?'Nothing is running right this minute with these filters. Try another category or turn off “Happening now”.':'Try a different search or loosen a filter.')+'</p><button class="btn primary" id="emptyReset">Clear filters</button></div>';
-    $('emptyReset').onclick=resetAll;
+    $('emptyReset').onclick=resetAll;}
   } else renderMore();
   var unm=visible.filter(function(v){return v.lat==null}).length;
   var onCats=KS.filter(function(k){return state.modes[k]});
@@ -341,8 +358,11 @@ function detailHtml(v){
   else h+='<span class="rv">No rating found</span>';
   if(d!=null)h+='<span>'+icon('nav','inl')+' '+fmtDist(d,v)+' away</span>';
   h+='</div></div>';
-  h+='<div class="actions"><a class="btn primary" href="'+dirUrl(v)+'" target="_blank" rel="noopener">'+icon('nav')+'Directions</a>';
-  var iu=v.ik&&safeUrl(v.ik.url);if(iu)h+='<a class="btn teal" href="'+esc(iu)+'" target="_blank" rel="noopener">'+icon('gift')+'Open on inKind</a>';
+  var sv=isSaved(v);
+  h+='<div class="actions"><a class="btn primary" href="'+esc(dirUrl(v))+'" target="_blank" rel="noopener" data-ext="maps">'+icon('nav')+'Directions</a>';
+  h+='<button type="button" class="btn ghost sq'+(sv?' saved':'')+'" id="dSave" aria-pressed="'+sv+'" aria-label="'+(sv?'Remove from saved':'Save this spot')+'">'+icon(sv?'heart-f':'heart')+'<span>'+(sv?'Saved':'Save')+'</span></button>';
+  if(BB.canShare())h+='<button type="button" class="btn ghost sq" id="dShare" aria-label="Share this spot">'+icon('share')+'<span>Share</span></button>';
+  var iu=v.ik&&safeUrl(v.ik.url);if(iu)h+='<a class="btn teal wide" href="'+esc(iu)+'" target="_blank" rel="noopener">'+icon('gift')+'Open on inKind</a>';
   h+='</div>';
   h+='<div class="dsec"><div class="addr">'+icon('pin')+'<div>'+esc(v.addr)+(v.approx?'<div class="muted" style="font-size:12.5px;margin-top:2px">Approximate pin ('+esc(v.q)+') — not a verified street location.</div>':'')+'</div></div></div>';
   var ks=KS.slice();ks.sort(function(a,b){return (act.indexOf(b)>=0)-(act.indexOf(a)>=0)});
@@ -350,6 +370,7 @@ function detailHtml(v){
   h+=ikHtml(v);
   if(v.rating!=null&&v.src)h+='<p class="foot-note">Rating: '+esc(v.src)+'. Deals and prices change often — confirm before you go.</p>';
   else h+='<p class="foot-note">Deals and prices change often — confirm before you go.</p>';
+  h+='<p class="foot-note">BamBoozle isn’t affiliated with this venue or inKind. Listings are gathered from public sources and may be out of date.</p>';
   return h;
 }
 var detailOpen=false,lastFocus=null;
@@ -376,6 +397,28 @@ function closeDetail(){
   if(lastFocus&&lastFocus.focus&&document.body.contains(lastFocus))lastFocus.focus({preventScroll:true});
 }
 $('dClose').onclick=closeDetail;
+function shareText(v){
+  var c=cats(v),k=c[0]||has(v)[0],x=v[k]||{},parts=[v.name+(present(v.loc)?' ('+v.loc+')':'')];
+  var when=[present(x.days)?x.days:'',present(x.times)?firstSeg(x.times):''].filter(Boolean).join(' · ');
+  parts.push(CATN[k]+(when?': '+when:''));
+  var dl=dealLine(v,k);if(dl)parts.push(dl.length>180?dl.slice(0,177)+'…':dl);
+  parts.push(v.addr);
+  return parts.join('\n');
+}
+function toggleSave(v){
+  var k=vkey(v);if(saved[k])delete saved[k];else saved[k]=Date.now();persistSaved();BB.haptic('medium');
+  syncSaved();refresh();if(detailOpen&&activeId===v.id){var st=$('dBody').scrollTop;$('dBody').innerHTML=detailHtml(v);$('dBody').scrollTop=st}
+  toast(saved[k]?'Saved '+v.name+(alertsOn()?' — you’ll get a heads-up before deals start.':'.'):'Removed from saved.',2600);
+  scheduleAlerts();
+}
+$('dBody').addEventListener('click',function(e){
+  if(activeId==null)return;var v=DATA[activeId];
+  if(e.target.closest('#dSave')){toggleSave(v);return}
+  if(e.target.closest('#dShare')){BB.haptic();BB.share({title:v.name,text:shareText(v),url:SITE+'#spot='+encodeURIComponent(vkey(v))}).then(function(r){if(r==='copied')toast('Copied to clipboard.',2200)}).catch(function(){toast('Couldn’t open the share sheet.')});return}
+});
+/* native: open external links (Maps, inKind, sources, policies) outside the web view */
+if(BB.isNative)document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');if(!a)return;var u=a.getAttribute('href');
+  if(/^https?:/i.test(u)&&(a.target==='_blank'||!/^https?:\/\/localhost/i.test(u))){e.preventDefault();BB.openExternal(a.href,{app:a.getAttribute('data-ext')==='maps'})}},true);
 $('dBody').addEventListener('scroll',function(){$('detail').classList.toggle('scrolled',this.scrollTop>110)},{passive:true});
 $('scrim').onclick=function(){if(filtersOpen)closeFilters()};
 map.on('click',function(){if(detailOpen)closeDetail()});
@@ -470,11 +513,10 @@ function fitAll(){
 
 /* ---------- geolocation ---------- */
 $('loc').onclick=function(){
-  if(!navigator.geolocation){toast('Geolocation isn’t supported here. Showing the Strip.');map.setView(STRIP,13);return}
-  var btn=this;btn.disabled=true;btn.classList.add('busy');btn.setAttribute('aria-label','Locating…');
-  navigator.geolocation.getCurrentPosition(function(pos){
+  var btn=this;btn.disabled=true;btn.classList.add('busy');btn.setAttribute('aria-label','Locating…');BB.haptic();
+  BB.getPosition().then(function(pos){
     btn.disabled=false;btn.classList.remove('busy');btn.classList.add('on');btn.setAttribute('aria-label','Update my location');
-    user=[pos.coords.latitude,pos.coords.longitude];
+    user=pos;
     if(userMarker)map.removeLayer(userMarker);
     userMarker=L.marker(user,{icon:L.divIcon({className:'',html:'<div class="you"></div>',iconSize:[20,20],iconAnchor:[10,10]}),zIndexOffset:2000,title:'You are here',keyboard:false}).addTo(map);
     if(detailOpen&&activeId!=null)$('dBody').innerHTML=detailHtml(DATA[activeId]);
@@ -485,11 +527,11 @@ $('loc').onclick=function(){
     var far=near.length&&dist(near[0])>50;
     toast(far?'You’re far from Las Vegas — nearest spot is '+Math.round(dist(near[0]))+' mi away.':'Showing the closest spots first.',4000);
   },function(err){
-    btn.disabled=false;btn.classList.remove('busy');btn.setAttribute('aria-label','Use my location');
-    var msg=err&&err.code===1?'Location permission denied.':(err&&err.code===3?'Location request timed out.':'Couldn’t find your location.');
+    btn.disabled=false;if(err&&err.code===0){toast('Location isn’t available here. Showing the Strip.');map.setView(STRIP,13);return}btn.classList.remove('busy');btn.setAttribute('aria-label','Use my location');
+    var msg=err&&err.code===1?'Location permission denied'+(BB.isNative?' — you can turn it on in Settings.':'.'):(err&&err.code===3?'Location request timed out.':'Couldn’t find your location.');
     toast(msg+' Showing the Strip instead.',6000);
     map.setView(STRIP,13);
-  },{enableHighAccuracy:true,timeout:15000,maximumAge:60000});
+  });
 };
 
 var nHH=DATA.filter(function(v){return v.hh}).length,nBR=DATA.filter(function(v){return v.br}).length,nLN=DATA.filter(function(v){return v.ln}).length,nBoth=DATA.filter(function(v){return has(v).length>1}).length;
@@ -502,29 +544,86 @@ refresh();syncRating();
 requestAnimationFrame(syncMode);
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){layout()});
 setInterval(function(){if(state.now)refresh()},60000);
-window.__vhh={nIK:nIK,count:DATA.length,nHH:nHH,nBR:nBR,nLN:nLN,nBoth:nBoth,setNow:function(d,m){NOW_OVERRIDE=(d==null?null:{day:d,min:m});refresh()},nowCount:function(){return DATA.filter(function(v){return isNow(v)}).length},isNowC:function(c){return isNowC(c)},markers:function(){return Object.keys(markers).length},visible:function(){return visible.length},onMap:function(){return cluster.getLayers().length},modes:function(){return {hh:!!state.modes.hh,br:!!state.modes.br,ln:!!state.modes.ln}},setModes:function(m){if(!m||typeof m!=='object')return;state.modes={hh:!!m.hh,br:!!m.br,ln:!!m.ln};saveModes();syncMode();refresh()},open:function(id){openDetail(id,{fromList:true})},close:closeDetail,sheet:function(s){if(s)setSheet(s);return sheetState},find:function(n){for(var i=0;i<DATA.length;i++)if(DATA[i].name===n)return i;return -1}};
+
+/* ---------- saved-spot alerts (native local notifications, opt-in) ---------- */
+var ALERT_LEAD=15;
+function alertsOn(){try{return BB.notif.supported()&&localStorage.getItem('bbAlerts')==='1'}catch(e){return false}}
+function laParts(t){var o={};new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric',hour12:false}).formatToParts(new Date(t)).forEach(function(p){o[p.type]=p.value});
+  return {y:+o.year,m:+o.month,d:+o.day,h:(+o.hour)%24,mi:+o.minute}}
+function laOffset(t){var p=laParts(t);return (Date.UTC(p.y,p.m-1,p.d,p.h,p.mi)-Math.floor(t/60000)*60000)}
+/* Las Vegas wall-clock (y,m,d + minutes since midnight) -> epoch ms */
+function vegasInstant(y,m,d,mins){var g=Date.UTC(y,m-1,d,0,mins),t=g-laOffset(g);return g-laOffset(t)}
+function alertPlan(now,days){
+  now=now||Date.now();days=days||7;var out=[],p=laParts(now);
+  DATA.forEach(function(v){if(!isSaved(v))return;
+    KS.forEach(function(k){var c=v[k];if(!c||!c.sch)return;
+      for(var i=0;i<days;i++){var dd=new Date(Date.UTC(p.y,p.m-1,p.d+i)),wd=(dd.getUTCDay()+6)%7;
+        (c.sch[wd]||[]).forEach(function(w){var start=vegasInstant(dd.getUTCFullYear(),dd.getUTCMonth()+1,dd.getUTCDate(),w[0]),at=start-ALERT_LEAD*60000;
+          if(at>now+30000)out.push({v:v,k:k,at:at,start:start})})}})});
+  out.sort(function(a,b){return a.at-b.at});
+  var seen={};out=out.filter(function(x){var s=x.v.id+'@'+x.start;if(seen[s])return false;seen[s]=1;return true});
+  return out.slice(0,60);
+}
+function fmtVegasTime(t){return new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',hour:'numeric',minute:'2-digit'}).format(new Date(t))}
+function scheduleAlerts(){
+  if(!BB.notif.supported())return Promise.resolve(0);
+  if(!alertsOn())return BB.notif.clear();
+  var items=alertPlan().map(function(x,i){var lab={hh:'Happy hour',br:'Brunch',ln:'Late-night deal'}[x.k];
+    return {id:1000+i,title:lab+' soon at '+x.v.name,body:lab+' starts at '+fmtVegasTime(x.start)+' (Vegas time). Deals can change — confirm before you go.',at:new Date(x.at),extra:{key:vkey(x.v)}}});
+  return BB.notif.schedule(items).catch(function(e){console.warn('alerts',e);return 0});
+}
+if(BB.notif.supported()){
+  $('alertsGroup').hidden=false;$('alertsOn').checked=alertsOn();
+  $('alertsOn').onchange=function(){var cb=this;BB.haptic();
+    if(!cb.checked){try{localStorage.setItem('bbAlerts','0')}catch(e){}scheduleAlerts();toast('Saved-spot alerts off.',2200);return}
+    BB.notif.request().then(function(ok){
+      if(!ok){cb.checked=false;try{localStorage.setItem('bbAlerts','0')}catch(e){}toast('Notifications are off for BamBoozle — enable them in Settings to get alerts.',5000);return}
+      try{localStorage.setItem('bbAlerts','1')}catch(e){}
+      scheduleAlerts().then(function(n){toast(savedCount()?'Alerts on — '+(n||0)+' upcoming reminder'+(n===1?'':'s')+' for your saved spots.':'Alerts on. Save a spot to get a heads-up before its deals start.',4000)});
+    });
+  };
+  BB.notif.onTap(function(extra){var key=extra&&extra.key;if(!key)return;for(var i=0;i<DATA.length;i++)if(vkey(DATA[i])===key){openDetail(i,{fromList:true});break}});
+  BB.onResume(function(){scheduleAlerts()});
+  scheduleAlerts();
+}
+/* Android hardware back button */
+BB.onBack(function(){if(filtersOpen){closeFilters();return true}if(detailOpen){closeDetail();return true}if(!isDesk()&&sheetState==='full'){setSheet('half');return true}return false});
+/* shared links: #spot=<name|address> opens that venue */
+function openFromHash(){var m=/^#spot=(.+)$/.exec(location.hash||'');if(!m)return;var key;try{key=decodeURIComponent(m[1])}catch(e){return}
+  for(var i=0;i<DATA.length;i++)if(vkey(DATA[i])===key){openDetail(i,{fromList:true});return}}
+window.addEventListener('hashchange',openFromHash);
+setTimeout(openFromHash,300);
+/* one-time data accuracy notice */
+(function(){var seen=false;try{seen=localStorage.getItem('bbDisclaimer')==='1'}catch(e){}
+  if(seen)return;var d=$('disc');if(!d)return;d.hidden=false;document.body.classList.add('disc-on');
+  $('discOk').onclick=function(){d.hidden=true;document.body.classList.remove('disc-on');try{localStorage.setItem('bbDisclaimer','1')}catch(e){}}})();
+syncSaved();
+window.__vhh={nIK:nIK,saved:function(){return savedCount()},toggleSave:function(id){toggleSave(DATA[id])},savedOnly:function(on){state.savedOnly=!!on;syncSaved();refresh();return visible.length},alertPlan:function(now,days){return alertPlan(now,days).map(function(x){return {name:x.v.name,k:x.k,at:x.at,start:x.start}})},shareText:function(id){return shareText(DATA[id])},count:DATA.length,nHH:nHH,nBR:nBR,nLN:nLN,nBoth:nBoth,setNow:function(d,m){NOW_OVERRIDE=(d==null?null:{day:d,min:m});refresh()},nowCount:function(){return DATA.filter(function(v){return isNow(v)}).length},isNowC:function(c){return isNowC(c)},markers:function(){return Object.keys(markers).length},visible:function(){return visible.length},onMap:function(){return cluster.getLayers().length},modes:function(){return {hh:!!state.modes.hh,br:!!state.modes.br,ln:!!state.modes.ln}},setModes:function(m){if(!m||typeof m!=='object')return;state.modes={hh:!!m.hh,br:!!m.br,ln:!!m.ln};saveModes();syncMode();refresh()},open:function(id){openDetail(id,{fromList:true})},close:closeDetail,sheet:function(s){if(s)setSheet(s);return sheetState},find:function(n){for(var i=0;i<DATA.length;i++)if(DATA[i].name===n)return i;return -1}};
 }
 
 (function(){
   function fail(e){var s=document.getElementById('status'),c=document.getElementById('count');if(c)c.textContent='Couldn’t load spots';if(s)s.textContent='Could not load venue data ('+(e&&e.message||e)+'). Check your connection and reload.';var l=document.getElementById('list');if(l)l.innerHTML='';}
-  fetch('data.json',{cache:'no-cache'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(startApp).catch(function(e){
+  var BBn=window.BB||{isNative:false,ready:function(){}};
+  function boot(d){try{startApp(d)}finally{BBn.ready()}}
+  setTimeout(function(){BBn.ready()},6000);
+  fetch('data.json',{cache:'no-cache'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(boot).catch(function(e){
     console.error('startApp failed',e&&e.stack||e);if(window.__vhh)return;
     // offline fallback: try the SW cache explicitly
-    if(window.caches){caches.match('data.json',{ignoreSearch:true}).then(function(r){return r?r.json().then(startApp):fail(e)}).catch(fail)}else fail(e);
+    if(window.caches){caches.match('data.json',{ignoreSearch:true}).then(function(r){return r?r.json().then(boot):fail(e)}).catch(fail)}else fail(e);
   });
-  if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(e){console.warn('SW registration failed',e)})})}
+  if('serviceWorker' in navigator&&!(BBn.isNative&&BBn.platform==='ios')){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(e){console.warn('SW registration failed',e)})})}
   // iOS "Add to Home Screen" hint
   var ua=navigator.userAgent||'',isIOS=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
   var standalone=window.navigator.standalone===true||(window.matchMedia&&matchMedia('(display-mode: standalone)').matches);
   var hint=document.getElementById('a2hs');
   var dismissed=false;try{dismissed=localStorage.getItem('a2hsDismissed')==='1'}catch(e){}
-  if(hint&&isIOS&&!standalone&&!dismissed){hint.classList.add('show');document.body.classList.add('a2hs-on')}
+  if(hint&&isIOS&&!standalone&&!dismissed&&!BBn.isNative){hint.classList.add('show');document.body.classList.add('a2hs-on')}
   var hx=document.getElementById('a2hsClose');
   if(hx)hx.onclick=function(){hint.classList.remove('show');document.body.classList.remove('a2hs-on');try{localStorage.setItem('a2hsDismissed','1')}catch(e){}};
   // Android/Chrome install prompt
   var deferred=null,ibs=[document.getElementById('installBtn'),document.getElementById('installBtn2')];
   function showIB(on){ibs.forEach(function(b){if(b)b.hidden=!on})}
-  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferred=e;showIB(true)});
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();if(BBn.isNative)return;deferred=e;showIB(true)});
   ibs.forEach(function(ib){if(ib)ib.onclick=function(){if(!deferred)return;deferred.prompt();deferred.userChoice.finally(function(){deferred=null;showIB(false)})}});
   window.addEventListener('appinstalled',function(){showIB(false)});
 })();

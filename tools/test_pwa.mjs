@@ -12,8 +12,9 @@ const b = await chromium.launch({executablePath:'/opt/google/chrome/chrome', hea
 let fails = 0; const ok = (c, msg) => { console.log((c ? 'PASS ' : 'FAIL ') + msg); if (!c) fails++; };
 const EXPECT = {n:738, markers:733, nHH:657, nBR:110, nLN:176, nIK:76};
 
-async function session(ctxOpts, fn) {
+async function session(ctxOpts, fn, init) {
   const ctx = await b.newContext({...ctxOpts, geolocation:{latitude:36.1070, longitude:-115.1760}, permissions:['geolocation']});
+  await ctx.addInitScript(init || (() => { try { if (!sessionStorage.getItem('t_keepDisc')) localStorage.setItem('bbDisclaimer', '1'); } catch (e) {} }));
   const p = await ctx.newPage(); const errs = [];
   p.on('pageerror', e => errs.push('pageerror ' + e.message)); p.on('console', m => { if (m.type() === 'error') errs.push('console ' + m.text()); });
   await p.goto(URL, {waitUntil:'networkidle', timeout:90000});
@@ -28,7 +29,7 @@ const setModes = async (p, modes) => { await p.evaluate(m => __vhh.setModes(m), 
 const modePressed = async (p) => p.evaluate(() => Object.fromEntries([...document.querySelectorAll('#mode button')].map(b => [b.dataset.mode, b.getAttribute('aria-pressed')==='true' && b.classList.contains('on')])));
 
 // ---------------- mobile (iPhone 13) ----------------
-await session(devices['iPhone 13'], async (p, ctx) => {
+if (!process.env.ONLY_NEW) await session(devices['iPhone 13'], async (p, ctx) => {
   const c = await p.evaluate(() => ({n:__vhh.count, nIK:__vhh.nIK, nHH:__vhh.nHH, nBR:__vhh.nBR, nLN:__vhh.nLN, markers:__vhh.markers()}));
   for (const k in EXPECT) ok(c[k] === EXPECT[k], `count ${k}=${c[k]} (expect ${EXPECT[k]})`);
   ok((await st(p)).vis === 738 && (await st(p)).onMap === 733, 'all 738 listed / 733 pins on map at start');
@@ -200,6 +201,48 @@ await session(devices['iPhone 13'], async (p, ctx) => {
   ok(off && off.n === 738 && off.markers === 733, 'offline reload works ' + JSON.stringify(off));
   await ctx.setOffline(false);
 });
+
+// ---------------- saved spots / share / disclaimer / deep link (web) ----------------
+await session(devices['iPhone 13'], async (p, ctx) => {
+  ok(await p.isVisible('#disc'), 'first-run data accuracy notice shown');
+  await p.click('#discOk'); await p.waitForTimeout(200);
+  ok(!(await p.isVisible('#disc')) && await p.evaluate(() => localStorage.getItem('bbDisclaimer') === '1'), 'notice dismissed + remembered');
+  ok(await p.evaluate(() => document.getElementById('alertsGroup').hidden), 'alerts toggle hidden on web');
+  ok(await p.evaluate(() => [...document.querySelectorAll('#filters .about.links a')].map(a => a.href).join(' ').includes('privacy.html')), 'privacy/support links in About');
+  ok(await p.evaluate(() => !window.BB.isNative && window.BB.platform === 'web'), 'BB bridge in web mode');
+  await p.click('#savedChip'); await p.waitForTimeout(300);
+  ok((await st(p)).vis === 0 && await p.isVisible('.empty') && /No saved spots/.test(await p.textContent('.empty h3')), 'Saved filter empty state');
+  await p.click('#emptyReset'); await p.waitForTimeout(300);
+  ok((await st(p)).vis === 738 && await p.evaluate(() => document.getElementById('savedChip').getAttribute('aria-pressed')) === 'false', 'empty-state reset clears Saved filter');
+  const id = await p.evaluate(() => __vhh.find('Bardot Brasserie'));
+  await p.evaluate(i => __vhh.open(i), id); await p.waitForTimeout(900);
+  ok(await p.isVisible('#dSave') && await p.isVisible('#dShare'), 'detail has Save + Share');
+  await p.click('#dSave'); await p.waitForTimeout(300);
+  ok(await p.evaluate(() => __vhh.saved()) === 1 && await p.evaluate(() => document.getElementById('dSave').getAttribute('aria-pressed')) === 'true', 'Save toggles on');
+  ok(await p.evaluate(() => document.getElementById('savedN').textContent) === '1', 'Saved chip count = 1');
+  const txt = await p.evaluate(i => __vhh.shareText(i), id);
+  ok(/Bardot/.test(txt) && /Las Vegas Blvd/.test(txt), 'share text has name + address: ' + JSON.stringify(txt.slice(0, 80)));
+  await p.screenshot({path: DIR + '/bamboozle_saved_detail.png'});
+  await p.click('#dClose'); await p.waitForTimeout(400);
+  await p.click('#savedChip'); await p.waitForTimeout(300);
+  ok((await st(p)).vis === 1, 'Saved filter -> 1');
+  ok(await p.evaluate(i => !!document.querySelector(`#list .card[data-id="${i}"] .sv`), id), 'saved heart on card');
+  await p.screenshot({path: DIR + '/bamboozle_saved_list.png'});
+  const plan = await p.evaluate(() => __vhh.alertPlan(Date.UTC(2026, 9, 12, 19, 0), 7)); // Mon Oct 12 12:00 PT
+  const fmt = new Intl.DateTimeFormat('en-US', {timeZone:'America/Los_Angeles', weekday:'short', hour:'numeric', minute:'2-digit'});
+  ok(plan.length > 0 && plan.every(x => x.start - x.at === 15 * 60000), 'alert plan for saved spot: ' + plan.slice(0, 3).map(x => x.k + ' ' + fmt.format(new Date(x.start))).join(', '));
+  ok(plan.some(x => /5:00 PM/.test(fmt.format(new Date(x.start)))), 'alert start times are in Vegas wall-clock time');
+  await p.reload({waitUntil:'networkidle'}); await p.waitForFunction(() => window.__vhh, null, {timeout:30000});
+  ok(await p.evaluate(() => __vhh.saved()) === 1, 'saved persists after reload');
+  await p.evaluate(i => __vhh.toggleSave(i), id); ok(await p.evaluate(() => __vhh.saved()) === 0, 'unsave');
+}, () => { sessionStorage.setItem('t_keepDisc', '1'); });
+
+// deep link
+await session(devices['iPhone 13'], async p => {
+  const bv = DATA.find(v => v.name === 'Bardot Brasserie');
+  await p.goto(URL + '#spot=' + encodeURIComponent(bv.name + '|' + bv.addr)); await p.waitForTimeout(1500);
+  ok(await p.isVisible('#detail.show') && /Bardot/.test(await p.textContent('#dName')), 'deep link #spot= opens venue');
+}, null);
 
 // ---------------- desktop ----------------
 await session({viewport:{width:1440, height:900}, deviceScaleFactor:2}, async p => {

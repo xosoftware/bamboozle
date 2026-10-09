@@ -17,7 +17,7 @@ if '--from-html' in sys.argv:
     s = t.index(a) + len(a); e = t.index(b, s)
     recs = json.loads(t[s:e].replace('<\\/', '</'))
     json.dump(recs, open('data.json', 'w'), ensure_ascii=False, separators=(',', ':'))
-files = ['index.html', 'app.css', 'app.js', 'data.json', 'manifest.webmanifest', 'fonts/inter-latin-wght.woff2'] + sorted('icons/' + f for f in os.listdir('icons'))
+files = ['index.html', 'app.css', 'native.js', 'app.js', 'data.json', 'manifest.webmanifest', 'fonts/inter-latin-wght.woff2'] + sorted('icons/' + f for f in os.listdir('icons'))
 def _bytes(f):
     data = open(f, 'rb').read()
     # Ignore the cache-bust query we rewrite below so VERSION stays stable across rebuilds.

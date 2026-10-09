@@ -3,7 +3,7 @@
 :root{
  --font:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
  --r-lg:22px;--r-md:16px;--r-sm:12px;
- --safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);
+ --safe-t:var(--safe-area-inset-top,env(safe-area-inset-top,0px));--safe-b:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px));
  --grad:linear-gradient(120deg,#ff3d9a 0%,#a855f7 52%,#22d3ee 100%);
  --top-h:150px;--sheet-h:300px;--ease:cubic-bezier(.22,.9,.3,1);
 }
@@ -357,3 +357,29 @@ select option{background:var(--surface);color:var(--text)}
 }
 @media (max-width:360px){#mode.cats button .ic,.seg button .ic{display:none}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ---------- saved spots, share, disclaimer, native (Oct 2026) ---------- */
+.chip .cnt{font-variant-numeric:tabular-nums;font-size:12px;opacity:.8}
+.chip .cnt:empty{display:none}
+#savedChip[aria-pressed=true]{background:linear-gradient(120deg,#ff3d9a,#ff6b6b);box-shadow:0 4px 14px rgba(255,61,154,.4)}
+.sv{flex:none;color:#ff4f8b;display:inline-flex;align-self:center}
+.sv .ic{width:15px;height:15px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.actions{grid-template-columns:1fr auto auto}
+.actions .btn.wide{grid-column:1/-1}
+.btn.sq{padding:0 14px;gap:6px}
+.btn.sq span{font-size:13.5px}
+.btn.saved{color:#ff4f8b;border-color:color-mix(in srgb,#ff4f8b 45%,transparent);background:color-mix(in srgb,#ff4f8b 12%,transparent)}
+.about.links a{color:inherit;font-weight:600}
+#disc{position:fixed;z-index:1100;left:12px;right:12px;bottom:calc(var(--sheet-h) + 14px);border-radius:18px;padding:12px 12px 12px 14px;display:flex;align-items:center;gap:12px;font-size:12.5px;line-height:1.35;box-shadow:var(--shadow)}
+#disc[hidden]{display:none}
+#disc div{flex:1;display:flex;flex-direction:column;gap:2px}
+#disc b{font-size:13.5px}
+#disc span{color:var(--muted)}
+#disc .btn{height:38px;padding:0 14px;font-size:13px;flex:none}
+body.disc-on #a2hs{display:none}
+@media (min-width:900px){#disc{left:auto;right:24px;width:380px;bottom:24px}}
+@media (max-width:899px){body.detail-open #disc{opacity:0;pointer-events:none}}
+html.native #installBtn,html.native #installBtn2,html.native #a2hs{display:none!important}
+html.native{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html.native input,html.native textarea,html.native .dbody{-webkit-user-select:text;user-select:text}
