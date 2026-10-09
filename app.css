@@ -90,17 +90,14 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .iconbtn.sm{width:36px;height:36px;color:var(--muted)}
 .iconbtn:not(.glass):hover{background:var(--chip-h)}
 .iconbtn .dot{position:absolute;top:6px;right:6px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--grad);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
-/* category multi-toggles + theme segmented */
-#mode.cats{display:grid;grid-template-columns:1fr 1fr 1fr;padding:4px;border-radius:999px;height:46px;gap:4px}
-#mode.cats button{display:flex;align-items:center;justify-content:center;gap:6px;border-radius:999px;font-size:14px;font-weight:600;min-height:38px;white-space:nowrap;color:var(--muted);border:1.5px solid transparent;background:transparent;opacity:.55;transition:background .2s,color .2s,opacity .2s,border-color .2s,box-shadow .2s}
-#mode.cats button .ic{width:17px;height:17px}
-#mode.cats button.on{opacity:1;color:#fff;border-color:transparent}
+/* category multi-toggles (inactive = pill-btn gray; selected = category fill) */
+#mode.cats{display:flex;align-items:center;gap:8px;padding:0;height:auto;background:transparent;border:0;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+#mode.cats button{height:34px;font-size:12.5px;font-weight:600;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;flex:1 1 0;min-width:0;padding:0 12px;border-radius:999px;background:var(--chip);border:1px solid var(--line);gap:5px;white-space:nowrap;transition:background .2s,color .2s,border-color .2s,box-shadow .2s}
+#mode.cats button .ic{width:15px;height:15px;flex:none}
+#mode.cats button.on{color:#fff;border-color:transparent}
 #mode.cats button[data-mode=hh].on{background:linear-gradient(120deg,#3b82f6,#6366f1);box-shadow:0 4px 14px rgba(59,130,246,.4)}
 #mode.cats button[data-mode=br].on{background:linear-gradient(120deg,#ff3d9a,#f472b6);box-shadow:0 4px 14px rgba(255,61,154,.4)}
 #mode.cats button[data-mode=ln].on{background:linear-gradient(120deg,#7c3aed,#a855f7);box-shadow:0 4px 14px rgba(124,58,237,.4)}
-#mode.cats button:not(.on)[data-mode=hh]{border-color:color-mix(in srgb,var(--hh) 55%,transparent);color:var(--hh-fg)}
-#mode.cats button:not(.on)[data-mode=br]{border-color:color-mix(in srgb,var(--br) 55%,transparent);color:var(--br-fg)}
-#mode.cats button:not(.on)[data-mode=ln]{border-color:color-mix(in srgb,var(--ln) 55%,transparent);color:var(--ln-fg)}
 .seg{position:relative;display:grid;grid-auto-flow:column;grid-auto-columns:1fr;padding:4px;border-radius:999px;height:46px;gap:0}
 .seg button{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:999px;font-size:14px;font-weight:600;color:var(--muted);transition:color .2s;min-height:38px;white-space:nowrap}
 .seg button .ic{width:17px;height:17px}
@@ -322,10 +319,10 @@ select option{background:var(--surface);color:var(--text)}
  #topbar{left:16px;top:16px;right:auto;width:400px;padding:18px 16px 14px;border-radius:24px 24px 0 0;background:var(--glass-strong);-webkit-backdrop-filter:blur(24px) saturate(170%);backdrop-filter:blur(24px) saturate(170%);border:1px solid var(--glass-line);border-bottom:0;gap:12px}
  #topbar::before{display:none}
  .brand{display:flex}
- .search,.iconbtn.glass,.seg.glass,#mode.cats.glass,.chip{box-shadow:none}
+ .search,.iconbtn.glass,.seg.glass,.chip{box-shadow:none}
  .search{background:var(--chip);border-color:var(--line);-webkit-backdrop-filter:none;backdrop-filter:none}
  #topbar .iconbtn.glass{background:var(--chip);border:1px solid var(--line);-webkit-backdrop-filter:none;backdrop-filter:none}
- .seg.glass,#mode.cats.glass{background:var(--chip);border:1px solid var(--line);-webkit-backdrop-filter:none;backdrop-filter:none}
+ .seg.glass{background:var(--chip);border:1px solid var(--line);-webkit-backdrop-filter:none;backdrop-filter:none}
  .chip{background:var(--chip);border-color:var(--line);-webkit-backdrop-filter:none;backdrop-filter:none}
  .chips{flex-wrap:wrap;margin:0;padding:0;overflow:visible}
  .chipsep{display:none}

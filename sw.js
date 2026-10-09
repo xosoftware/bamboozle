@@ -1,5 +1,5 @@
 /* BamBoozle service worker. VERSION is bumped by tools/build.py on every build. */
-const VERSION = 'v2-73410da550';
+const VERSION = 'v2-05e97dd725';
 const SHELL_CACHE = 'vhh-shell-' + VERSION;
 const TILE_CACHE = 'vhh-tiles-v2';
 const RUNTIME_CACHE = 'vhh-runtime-v1';
