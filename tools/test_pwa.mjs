@@ -19,7 +19,8 @@ async function session(ctxOpts, fn) {
   await ctx.close();
 }
 const st = p => p.evaluate(() => ({count:document.getElementById('count').textContent, vis:__vhh.visible(), onMap:__vhh.onMap()}));
-const clickMode = async (p, m) => { await p.click(`#mode button[data-mode=${m}]`); await p.waitForTimeout(250); return st(p); };
+const setModes = async (p, modes) => { await p.evaluate(m => __vhh.setModes(m), modes); await p.waitForTimeout(300); return st(p); };
+const modePressed = async (p) => p.evaluate(() => Object.fromEntries([...document.querySelectorAll('#mode button')].map(b => [b.dataset.mode, b.getAttribute('aria-pressed')==='true' && b.classList.contains('on')])));
 
 // ---------------- mobile (iPhone 13) ----------------
 await session(devices['iPhone 13'], async (p, ctx) => {
@@ -40,7 +41,41 @@ await session(devices['iPhone 13'], async (p, ctx) => {
   ok(await p.evaluate(() => document.querySelector('#topbar h1').textContent === 'BamBoozle'), 'header brand BamBoozle');
   ok(await p.evaluate(() => document.getElementById('a2hs').classList.contains('show')), 'iOS add-to-home hint shown');
   ok(await p.evaluate(() => document.querySelector('#a2hs b').textContent.includes('BamBoozle')), 'iOS hint mentions BamBoozle');
-  for (const [m, n] of [['hh',657],['br',110],['ln',176],['all',738]]) { const s = await clickMode(p, m); ok(s.vis === n, `mode ${m}: ${s.vis}`); }
+  ok(!(await p.evaluate(() => !!document.querySelector('#mode [data-mode=all], #mode .seg-ind'))), 'no All button / sliding indicator');
+  ok(await p.evaluate(() => document.getElementById('mode').classList.contains('cats') && document.getElementById('mode').getAttribute('role')==='group'), 'mode is cats group');
+  let pressed = await modePressed(p);
+  ok(pressed.hh && pressed.br && pressed.ln, 'all three categories ON by default ' + JSON.stringify(pressed));
+  ok((await st(p)).vis === 738, 'all categories on -> 738');
+  const KS_OK = (pr, keep) => ['hh','br','ln'].every(k => pr[k] === (k===keep));
+  for (const [m, n] of [['hh',657],['br',110],['ln',176]]) {
+    const only = {hh:false,br:false,ln:false}; only[m]=true;
+    const s = await setModes(p, only);
+    pressed = await modePressed(p);
+    ok(s.vis === n && pressed[m] && KS_OK(pressed, m), `only ${m}: ${s.vis} pressed=${JSON.stringify(pressed)}`);
+  }
+  // multi-select: hh+br
+  let s = await setModes(p, {hh:true,br:true,ln:false});
+  ok(s.vis > 657 && s.vis < 738, 'hh+br multi-select -> ' + s.vis);
+  // cannot turn last one off via UI
+  await setModes(p, {hh:true,br:false,ln:false});
+  await p.click('#mode button[data-mode=hh]'); await p.waitForTimeout(300);
+  pressed = await modePressed(p);
+  ok(pressed.hh && !pressed.br && !pressed.ln && (await st(p)).vis === 657, 'cannot turn off last category ' + JSON.stringify(pressed));
+  // persist
+  await setModes(p, {hh:false,br:true,ln:true});
+  const stored = await p.evaluate(() => localStorage.getItem('vhhModes'));
+  ok(/"br":true/.test(stored) && /"hh":false/.test(stored), 'modes persisted in localStorage: ' + stored);
+  await p.reload({waitUntil:'networkidle'}); await p.waitForFunction(() => window.__vhh, null, {timeout:30000});
+  pressed = await modePressed(p);
+  ok(!pressed.hh && pressed.br && pressed.ln, 'modes restored after reload ' + JSON.stringify(pressed));
+  // reset turns all on
+  await p.click('#filtertoggle'); await p.waitForTimeout(400);
+  await p.click('#reset'); await p.waitForTimeout(400);
+  pressed = await modePressed(p);
+  ok(pressed.hh && pressed.br && pressed.ln && (await st(p)).vis === 738, 'reset restores all categories');
+  await p.click('#fApply').catch(()=>{}); await p.waitForTimeout(300);
+  // leave all on for remaining tests
+  await setModes(p, {hh:true,br:true,ln:true});
   await p.click('#ikChip'); await p.waitForTimeout(250); ok((await st(p)).vis === 76, 'inKind chip -> ' + (await st(p)).vis);
   await p.click('#ikChip'); await p.waitForTimeout(250);
   await p.evaluate(() => __vhh.setNow(1, 90)); // Tue 1:30 AM Vegas time
@@ -99,6 +134,10 @@ await session(devices['iPhone 13'], async (p, ctx) => {
   await p.click('#a2hsClose'); await p.evaluate(() => { document.getElementById('chips').scrollLeft = 0; }); await p.waitForTimeout(4500);
   await p.screenshot({path: DIR + '/redesign_mobile_list.png'});
   await p.screenshot({path: DIR + '/bamboozle_mobile.png'});
+  await setModes(p, {hh:true,br:false,ln:true});
+  await p.waitForTimeout(400);
+  await p.screenshot({path: DIR + '/bamboozle_toggles.png'});
+  await setModes(p, {hh:true,br:true,ln:true});
   // sheet states
   for (const s of ['peek', 'full', 'half']) { await p.evaluate(s => __vhh.sheet(s), s); await p.waitForTimeout(500); }
   ok(await p.evaluate(() => __vhh.sheet()) === 'half', 'sheet snaps peek/full/half');
@@ -125,7 +164,13 @@ await session(devices['iPhone 13'], async (p, ctx) => {
 await session({viewport:{width:1440, height:900}, deviceScaleFactor:2}, async p => {
   const c = await p.evaluate(() => ({n:__vhh.count, markers:__vhh.markers(), nIK:__vhh.nIK}));
   ok(c.n === 738 && c.markers === 733 && c.nIK === 76, 'desktop counts ' + JSON.stringify(c));
-  for (const [m, n] of [['hh',657],['br',110],['ln',176],['all',738]]) { const s = await clickMode(p, m); ok(s.vis === n, `desktop mode ${m}: ${s.vis}`); }
+  ok((await st(p)).vis === 738, 'desktop all on -> 738');
+  for (const [m, n] of [['hh',657],['br',110],['ln',176]]) {
+    const only = {hh:false,br:false,ln:false}; only[m]=true;
+    const s = await setModes(p, only);
+    ok(s.vis === n, `desktop only ${m}: ${s.vis}`);
+  }
+  await setModes(p, {hh:true,br:true,ln:true});
   await p.click('#loc'); await p.waitForTimeout(2500);
   const id = await p.evaluate(() => __vhh.find('Ocean Prime'));
   await p.click(`#list .card[data-id="${id}"]`); await p.waitForTimeout(2000);

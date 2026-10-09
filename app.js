@@ -70,11 +70,22 @@ var cluster=L.markerClusterGroup({maxClusterRadius:48,showCoverageOnHover:false,
 map.addLayer(cluster);
 
 var user=null,userMarker=null,markers={},activeId=null;
-function freshState(){return {mode:'all',q:'',zip:'',days:{},now:false,minRating:0,exactOnly:false,bothOnly:false,ikOnly:false}}
-var state=freshState();
+function defaultModes(){return {hh:true,br:true,ln:true}}
+function loadModes(){
+  try{
+    var raw=localStorage.getItem('vhhModes');
+    if(!raw)return defaultModes();
+    var o=JSON.parse(raw),m={hh:!!o.hh,br:!!o.br,ln:!!o.ln};
+    if(!(m.hh||m.br||m.ln))return defaultModes();
+    return m;
+  }catch(e){return defaultModes()}
+}
+function saveModes(){try{localStorage.setItem('vhhModes',JSON.stringify(state.modes))}catch(e){}}
+function freshState(){return {modes:defaultModes(),q:'',zip:'',days:{},now:false,minRating:0,exactOnly:false,bothOnly:false,ikOnly:false}}
+var state=freshState();state.modes=loadModes();
 var KS=['hh','br','ln'],COL={hh:'var(--hh)',br:'var(--br)',ln:'var(--ln)'};
 function has(v){return KS.filter(function(k){return !!v[k]})}
-function cats(v){return KS.filter(function(k){return v[k]&&(state.mode==='all'||state.mode===k)})}
+function cats(v){return KS.filter(function(k){return v[k]&&state.modes[k]})}
 function shown(v){var c=cats(v);return c.length?c:has(v)}
 function kindOf(v){var c=shown(v);return c.length>1?'multi':c[0]}
 function onIK(v){return !!(v.ik&&v.ik.s==='Yes')}
@@ -149,15 +160,21 @@ function syncIK(){$('ikOnly').checked=state.ikOnly;$('ikChip').setAttribute('ari
 $('ikOnly').onchange=function(){state.ikOnly=this.checked;syncIK();refresh()};
 $('ikChip').onclick=function(){state.ikOnly=!state.ikOnly;syncIK();refresh()};
 var modeBtns=Array.prototype.slice.call($('mode').querySelectorAll('button'));
-modeBtns.forEach(function(b){b.onclick=function(){state.mode=b.getAttribute('data-mode');syncMode();refresh()}});
+modeBtns.forEach(function(b){b.onclick=function(){
+  var m=b.getAttribute('data-mode');
+  var onN=KS.filter(function(k){return state.modes[k]}).length;
+  if(state.modes[m]&&onN===1){toast('Keep at least one category on',2200);return}
+  state.modes[m]=!state.modes[m];saveModes();syncMode();refresh();
+}});
 function syncMode(){
-  var on=null;modeBtns.forEach(function(b){var x=b.getAttribute('data-mode')===state.mode;b.classList.toggle('on',x);b.setAttribute('aria-checked',x);if(x)on=b});
-  var ind=$('mode').querySelector('.seg-ind');
-  if(on){ind.style.width=on.offsetWidth+'px';ind.style.transform='translateX('+(on.offsetLeft-4)+'px)';ind.className='seg-ind '+state.mode}
+  modeBtns.forEach(function(b){
+    var m=b.getAttribute('data-mode'),on=!!state.modes[m];
+    b.classList.toggle('on',on);b.setAttribute('aria-pressed',on?'true':'false');
+  });
 }
 $('now').onclick=function(){state.now=!state.now;this.setAttribute('aria-pressed',state.now);this.classList.toggle('on',state.now);refresh()};
 function resetAll(){
-  state=freshState();syncMode();syncRating();syncIK();
+  state=freshState();saveModes();syncMode();syncRating();syncIK();
   $('q').value='';$('qclear').hidden=true;$('zip').value='';$('exactOnly').checked=false;$('bothOnly').checked=false;
   $('now').setAttribute('aria-pressed','false');$('now').classList.remove('on');
   Array.prototype.forEach.call($('days').children,function(b){b.setAttribute('aria-pressed','false')});
@@ -232,10 +249,11 @@ function renderList(){
     $('emptyReset').onclick=resetAll;
   } else renderMore();
   var unm=visible.filter(function(v){return v.lat==null}).length;
-  var lab={hh:'happy hour',br:'brunch',ln:'late night',all:'all categories'}[state.mode];
+  var onCats=KS.filter(function(k){return state.modes[k]});
+  var lab=onCats.length===3?'all categories':onCats.map(function(k){return {hh:'happy hour',br:'brunch',ln:'late night'}[k]}).join(' + ');
   $('count').textContent=visible.length+(visible.length===1?' spot':' spots');
-  var lab2={hh:'Happy hour',br:'Brunch',ln:'Late night',all:'All categories'}[state.mode];
-  $('status').textContent=(visible.length<DATA.length?'of '+DATA.length+' · ':'')+(state.mode==='all'?'':lab2+' · ')+(user?'Nearest first':'Sorted A–Z');
+  var lab2=onCats.length===3?'':onCats.map(function(k){return CATN[k]}).join(' · ');
+  $('status').textContent=(visible.length<DATA.length?'of '+DATA.length+' · ':'')+(lab2?lab2+' · ':'')+(user?'Nearest first':'Sorted A–Z');
   $('status').setAttribute('data-full',visible.length+' of '+DATA.length+' venues ('+lab+')');
   var sb=$('sortBtn');sb.hidden=false;sb.innerHTML=user?icon('nav')+'Nearest':icon('locate')+'Sort by distance';
 }
@@ -478,13 +496,13 @@ var nHH=DATA.filter(function(v){return v.hh}).length,nBR=DATA.filter(function(v)
 var nIK=DATA.filter(onIK).length,nApx=DATA.filter(function(v){return v.approx}).length;
 $('sub').textContent=DATA.length+' spots · happy hour, brunch & late night';
 $('about').textContent=DATA.length+' venues: '+nHH+' happy hour, '+nBR+' brunch, '+nLN+' late night ('+nBoth+' on 2+ lists), '+nIK+' on inKind, '+nApx+' approximate pins. Late-night windows after midnight belong to the previous evening. Times use Las Vegas time. Data gathered from venue sites and third-party guides (Oct 2026) — many entries are unverified; confirm before you go.';
-modeBtns.forEach(function(b){var m=b.getAttribute('data-mode'),n={all:DATA.length,hh:nHH,br:nBR,ln:nLN}[m];b.title=n+' venues';b.setAttribute('aria-label',{all:'All',hh:'Happy hour',br:'Brunch',ln:'Late night'}[m]+' ('+n+')')});
+modeBtns.forEach(function(b){var m=b.getAttribute('data-mode'),n={hh:nHH,br:nBR,ln:nLN}[m];b.title=n+' venues · tap to toggle';b.setAttribute('aria-label',({hh:'Happy hour',br:'Brunch',ln:'Late night'})[m]+' ('+n+')')});
 layout();setSheet('half',true);
 refresh();syncRating();
 requestAnimationFrame(syncMode);
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(function(){layout()});
 setInterval(function(){if(state.now)refresh()},60000);
-window.__vhh={nIK:nIK,count:DATA.length,nHH:nHH,nBR:nBR,nLN:nLN,nBoth:nBoth,setNow:function(d,m){NOW_OVERRIDE=(d==null?null:{day:d,min:m});refresh()},nowCount:function(){return DATA.filter(function(v){return isNow(v)}).length},isNowC:function(c){return isNowC(c)},markers:function(){return Object.keys(markers).length},visible:function(){return visible.length},onMap:function(){return cluster.getLayers().length},mode:function(){return state.mode},open:function(id){openDetail(id,{fromList:true})},close:closeDetail,sheet:function(s){if(s)setSheet(s);return sheetState},find:function(n){for(var i=0;i<DATA.length;i++)if(DATA[i].name===n)return i;return -1}};
+window.__vhh={nIK:nIK,count:DATA.length,nHH:nHH,nBR:nBR,nLN:nLN,nBoth:nBoth,setNow:function(d,m){NOW_OVERRIDE=(d==null?null:{day:d,min:m});refresh()},nowCount:function(){return DATA.filter(function(v){return isNow(v)}).length},isNowC:function(c){return isNowC(c)},markers:function(){return Object.keys(markers).length},visible:function(){return visible.length},onMap:function(){return cluster.getLayers().length},modes:function(){return {hh:!!state.modes.hh,br:!!state.modes.br,ln:!!state.modes.ln}},setModes:function(m){if(!m||typeof m!=='object')return;var next={hh:!!m.hh,br:!!m.br,ln:!!m.ln};if(!(next.hh||next.br||next.ln))next=defaultModes();state.modes=next;saveModes();syncMode();refresh()},open:function(id){openDetail(id,{fromList:true})},close:closeDetail,sheet:function(s){if(s)setSheet(s);return sheetState},find:function(n){for(var i=0;i<DATA.length;i++)if(DATA[i].name===n)return i;return -1}};
 }
 
 (function(){

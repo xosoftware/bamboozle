@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-title" content="BamBoozle">
 <meta name="application-name" content="BamBoozle">
 <meta property="og:site_name" content="BamBoozle">
-<link rel="manifest" href="manifest.webmanifest?v=bcfa14bfea">
+<link rel="manifest" href="manifest.webmanifest?v=7a76ce9ed2">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
@@ -61,12 +61,10 @@
   <button id="themeBtn" class="iconbtn glass" aria-label="Switch to light mode" title="Toggle light / dark"><svg class="ic"><use href="#i-sun"/></svg></button>
   <button id="filtertoggle" class="iconbtn glass" aria-label="More filters" aria-haspopup="dialog"><svg class="ic"><use href="#i-sliders"/></svg><span class="dot" id="fcount" hidden></span></button>
  </div>
- <div id="mode" class="seg glass" role="radiogroup" aria-label="Category">
-  <span class="seg-ind" aria-hidden="true"></span>
-  <button data-mode="all" role="radio" class="on" aria-checked="true"><span class="lbl">All</span></button>
-  <button data-mode="hh" role="radio" aria-checked="false"><svg class="ic"><use href="#i-hh"/></svg><span class="lbl">Happy hr</span></button>
-  <button data-mode="br" role="radio" aria-checked="false"><svg class="ic"><use href="#i-br"/></svg><span class="lbl">Brunch</span></button>
-  <button data-mode="ln" role="radio" aria-checked="false"><svg class="ic"><use href="#i-ln"/></svg><span class="lbl">Late</span></button>
+ <div id="mode" class="cats glass" role="group" aria-label="Categories">
+  <button data-mode="hh" type="button" class="on" aria-pressed="true"><svg class="ic"><use href="#i-hh"/></svg><span class="lbl">Happy hr</span></button>
+  <button data-mode="br" type="button" class="on" aria-pressed="true"><svg class="ic"><use href="#i-br"/></svg><span class="lbl">Brunch</span></button>
+  <button data-mode="ln" type="button" class="on" aria-pressed="true"><svg class="ic"><use href="#i-ln"/></svg><span class="lbl">Late</span></button>
  </div>
  <div class="chips" id="chips" role="toolbar" aria-label="Quick filters">
   <button id="installBtn" class="chip install" hidden><svg class="ic"><use href="#i-download"/></svg>Install BamBoozle</button>
