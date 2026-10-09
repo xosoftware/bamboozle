@@ -1,156 +1,146 @@
 <!DOCTYPE html>
-<html lang="en"><head>
+<html lang="en" data-theme="dark"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1f2937">
+<meta name="theme-color" content="#0b0b12">
+<meta name="color-scheme" content="dark light">
 <meta name="description" content="Las Vegas happy hours, brunch, late-night specials and inKind restaurants on a map, sorted nearest-first.">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="VegasHH">
 <link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<link rel="preload" href="fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
 <title>Vegas Happy Hours</title>
+<script>(function(){try{var t=localStorage.getItem('vhhTheme')||'dark';if(t==='system')t=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';document.documentElement.setAttribute('data-theme',t)}catch(e){}})();</script>
 <link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
 <link rel="stylesheet" href="vendor/MarkerCluster.css">
-<link rel="stylesheet" href="vendor/MarkerCluster.Default.css">
-<style>
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;font:14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#1c1c1e}
-#app{display:flex;height:100%;height:100dvh}
-#side{width:400px;max-width:45vw;display:flex;flex-direction:column;border-right:1px solid #d8d8dc;background:#fafafb;z-index:2}
-#mapwrap{flex:1;position:relative;min-width:0}
-#map{position:absolute;inset:0}
-header{padding:10px 12px 6px;background:#1f2937;color:#fff}
-header h1{font-size:16px;margin:0 0 2px}
-header .sub{font-size:12px;color:#cbd5e1}
-#controls{padding:8px 10px;border-bottom:1px solid #e3e3e7;background:#fff}
-.row{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center}
-input[type=search],select{padding:7px 8px;border:1px solid #c7c7cc;border-radius:8px;font-size:14px;background:#fff;min-width:0}
-input[type=search]{flex:1}
-button{font:inherit;border:1px solid #c7c7cc;background:#fff;border-radius:8px;padding:7px 10px;cursor:pointer}
-button.primary{background:#2563eb;border-color:#2563eb;color:#fff;font-weight:600}
-button.on,.chip.on{background:#f59e0b;border-color:#d97706;color:#1c1c1e;font-weight:600}
-.chip{padding:5px 9px;border-radius:14px;font-size:13px}
-label.chk{display:flex;align-items:center;gap:4px;font-size:13px}
-#status{font-size:12px;color:#555;padding:4px 12px;background:#f2f2f5;border-bottom:1px solid #e3e3e7}
-#list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.item{padding:9px 12px;border-bottom:1px solid #ececf0;cursor:pointer;background:#fff}
-.item:hover,.item.active{background:#fff7e0}
-.item .n{font-weight:600}
-.item .m{font-size:12px;color:#555}
-.item .d{float:right;font-size:12px;font-weight:600;color:#2563eb;margin-left:8px;white-space:nowrap}
-.tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:8px;background:#fde8c8;color:#92400e;margin-left:4px}
-.tag.now{background:#d1fae5;color:#065f46}
-.pin{width:16px;height:16px;border-radius:50%;border:2px solid #fff;background:#2563eb;box-shadow:0 0 3px rgba(0,0,0,.6)}
-.pin.hh{background:#2563eb}
-.pin.br{background:#db2777}
-.pin.both{background:linear-gradient(90deg,#2563eb 50%,#db2777 50%)}
-.pin.ln{background:#7c3aed}
-.pin.multi3{background:linear-gradient(90deg,#2563eb 33.3%,#db2777 33.3%,#db2777 66.6%,#7c3aed 66.6%)}
-.pin.approx{border:3px dashed #ea580c;box-shadow:0 0 3px rgba(0,0,0,.5)}
-#mode{display:flex;gap:0;margin-bottom:6px;width:100%}
-#mode button{flex:1;border-radius:0;padding:7px 4px;font-size:13px}
-#mode button:first-child{border-radius:8px 0 0 8px}#mode button:last-child{border-radius:0 8px 8px 0}
-#mode button[data-mode=hh].on{background:#2563eb;border-color:#2563eb;color:#fff}
-#mode button[data-mode=br].on{background:#db2777;border-color:#db2777;color:#fff}
-#mode button[data-mode=ln].on{background:#7c3aed;border-color:#7c3aed;color:#fff}
-#mode button[data-mode=all].on{background:linear-gradient(90deg,#2563eb,#db2777,#7c3aed);border-color:#6d28d9;color:#fff}
-.badge{display:inline-block;font-size:11px;padding:1px 6px;border-radius:8px;margin-left:4px;color:#fff;font-weight:600}
-.badge.hh{background:#2563eb}.badge.br{background:#db2777}.badge.ln{background:#7c3aed}
-.tag.warn{background:#fee2e2;color:#991b1b}
-.ik,.leaflet-container a.ik{display:inline-block;font-size:11px;padding:1px 6px;border-radius:8px;margin-left:4px;background:#0f766e;color:#fff;font-weight:700;text-decoration:none}
-.ik.unc,.leaflet-container a.ik.unc{background:#fef3c7;color:#92400e;border:1px solid #f59e0b}
-.pop .iksec{border:1px solid #99f6e4;background:#f0fdfa;border-radius:6px;padding:5px 7px;margin:6px 0;font-size:12px}
-.pop .iksec a.ikbtn,.leaflet-container .pop .iksec a.ikbtn{display:inline-block;margin-top:3px;padding:4px 8px;background:#0f766e;color:#fff;border-radius:6px;text-decoration:none;font-weight:600}
-.pin.ikring{outline:2px solid #0f766e;outline-offset:1px}
-.item .m.c-hh{color:#1d4ed8}.item .m.c-br{color:#be185d}.item .m.c-ln{color:#6d28d9}
-.pop .sec{border-left:4px solid #2563eb;padding:2px 0 2px 8px;margin:8px 0}
-.pop .sec.br{border-left-color:#db2777}
-.pop .sec.ln{border-left-color:#7c3aed}
-.pop .sec h4{margin:0 0 2px;font-size:13px}
-.pop .sec.hh h4{color:#1d4ed8}.pop .sec.br h4{color:#be185d}.pop .sec.ln h4{color:#6d28d9}
-.you{width:18px;height:18px;border-radius:50%;background:#10b981;border:3px solid #fff;box-shadow:0 0 0 3px rgba(16,185,129,.35),0 0 4px #000}
-.pop{max-width:290px;font-size:13px}
-.pop h3{margin:0 0 2px;font-size:15px}
-.pop .k{font-weight:600}
-.pop p{margin:4px 0}
-.pop .warn{background:#fff3e0;border:1px solid #fdba74;border-radius:6px;padding:4px 6px;font-size:12px}
-.pop .note{font-size:11.5px;color:#555}
-.pop .dir{display:inline-block;margin-top:4px;padding:6px 10px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:600}
-.leaflet-popup-content{margin:10px 12px;max-height:55vh;overflow-y:auto}
-#toast{position:absolute;left:50%;top:10px;transform:translateX(-50%);background:#111c;color:#fff;padding:8px 14px;border-radius:10px;z-index:1000;display:none;max-width:90%;text-align:center}
-#viewtoggle{display:none}
-.legend{background:#fff;padding:6px 8px;border-radius:8px;font-size:12px;box-shadow:0 1px 5px rgba(0,0,0,.4)}
-.legend .pin{display:inline-block;vertical-align:middle;margin-right:4px;width:12px;height:12px}
-.legend .pin.approx{border-width:2px}
-@media (max-width:760px){
- #app{flex-direction:column}
- #side{width:100%;max-width:none;height:46%;border-right:0;border-top:1px solid #ccc;order:2}
- #mapwrap{order:1;flex:1}
- header .sub{display:none}
- body.listmode #side{height:100%}
- body.listmode #mapwrap{display:none}
- #viewtoggle{display:inline-block}
- #controls{max-height:42%;overflow-y:auto}
-}
-
-header{padding-top:calc(10px + env(safe-area-inset-top))}
-#filtertoggle,#installBtn{display:none}
-#a2hs{display:none;position:absolute;left:8px;right:8px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:1100;background:#111827f0;color:#fff;border-radius:12px;padding:10px 34px 10px 12px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.4)}
-#a2hs b{color:#fcd34d}
-#a2hs .shr{display:inline-block;border:1px solid #fff8;border-radius:4px;padding:0 4px;font-size:12px}
-#a2hsClose{position:absolute;right:4px;top:4px;background:none;border:0;color:#fff;font-size:18px;padding:4px 8px}
-@media (max-width:760px){
- header{padding:calc(6px + env(safe-area-inset-top)) 10px 4px}
- header h1{font-size:15px}
- #filtertoggle{display:inline-block}
- #controls{max-height:none;overflow:visible}
- #controls .opt{display:none}
- body.filtersopen #controls .opt{display:flex}
- body.filtersopen #controls{max-height:55vh;overflow-y:auto}
- #side{height:48%}
- #list{padding-bottom:env(safe-area-inset-bottom)}
- button,select,input[type=search]{min-height:36px}
- #controls .row button{padding:6px 8px;font-size:13px}
- .legend .lt{display:block;font-weight:600;cursor:pointer}
- .legend>div:not(.lt){display:none}
- .legend.open>div{display:block}
-}
-.legend .lt{display:none}
-</style></head>
+<link rel="stylesheet" href="app.css">
+</head>
 <body>
-<div id="app">
- <div id="side">
-  <header><h1>🍸🥂🌙 Las Vegas Happy Hour, Brunch &amp; Late Night</h1><div class="sub" id="sub"></div></header>
-  <div id="controls">
-   <div id="mode" role="group" aria-label="Category"><button data-mode="hh">🍸 Happy hour</button><button data-mode="br">🥂 Brunch</button><button data-mode="ln">🌙 Late night</button><button data-mode="all" class="on">All</button></div>
-   <div class="row"><input type="search" id="q" placeholder="Search venue, area, deal, item…" aria-label="Search">
-     <select id="zip" aria-label="ZIP"><option value="">All ZIPs</option></select></div>
-   <div class="row opt" id="days"></div>
-   <div class="row opt">
-     <button id="now" title="Uses Las Vegas time and the parsed days/times">🟢 Happening now</button>
-     <select id="rating" aria-label="Minimum rating"><option value="0">Any rating</option><option value="3.5">★ 3.5+</option><option value="4">★ 4.0+</option><option value="4.5">★ 4.5+</option></select>
-     <label class="chk"><input type="checkbox" id="exactOnly"> Exact addresses only</label>
-     <label class="chk"><input type="checkbox" id="bothOnly"> Venues on 2+ lists only</label>
-     <label class="chk" title="Venues found in inKind's Las Vegas partner list (checked Oct 9, 2026)"><input type="checkbox" id="ikOnly"> <span class="ik" style="margin:0">inKind</span> On inKind only</label>
-   </div>
-   <div class="row">
-     <button id="loc" class="primary">📍 Use my location</button>
-     <button id="reset">Reset</button>
-     <button id="viewtoggle">☰ List / 🗺 Map</button>
-     <button id="filtertoggle">⚙ Filters</button>
-     <button id="installBtn">⬇ Install app</button>
-   </div>
-  </div>
-  <div id="status"></div>
-  <div id="list"></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+ <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></symbol>
+ <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></symbol>
+ <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+ <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+ <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+ <symbol id="i-locate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></symbol>
+ <symbol id="i-nav" viewBox="0 0 24 24"><path d="M3 11 22 2l-9 19-2-8-8-2Z"/></symbol>
+ <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+ <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></symbol>
+ <symbol id="i-pin" viewBox="0 0 24 24"><path d="M19 10c0 5.5-7 12-7 12s-7-6.5-7-12a7 7 0 0 1 14 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+ <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M10 14 20 4M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></symbol>
+ <symbol id="i-hh" viewBox="0 0 24 24"><path d="M4 4h16l-8 9Z"/><path d="M12 13v8M8 21h8"/></symbol>
+ <symbol id="i-br" viewBox="0 0 24 24"><path d="M5 9h12v5a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5Z"/><path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17M9 3v3M13 3v3"/></symbol>
+ <symbol id="i-ln" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5Z"/></symbol>
+ <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8M12 8S10.5 3 8 3.5 7 8 12 8ZM12 8s1.5-5 4-4.5S17 8 12 8Z"/></symbol>
+ <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+ <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
+ <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 3v12M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></symbol>
+ <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2.5 2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4 6.1 20.5l1.2-6.5L2.5 9.4l6.6-.9Z"/></symbol>
+ <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+</defs></svg>
+
+<div id="map" aria-label="Map of venues"></div>
+
+<header id="topbar">
+ <div class="brand"><img src="icons/icon-192.png" alt="" width="36" height="36"><div><h1>Vegas Happy Hours</h1><p id="sub">Happy hour · brunch · late night</p></div></div>
+ <div class="searchrow">
+  <label class="search glass" for="q">
+   <svg class="ic"><use href="#i-search"/></svg>
+   <input type="search" id="q" placeholder="Search spots, deals, areas…" aria-label="Search venues, areas, deals and items" autocomplete="off" enterkeyhint="search">
+   <button id="qclear" class="iconbtn sm" aria-label="Clear search" hidden><svg class="ic"><use href="#i-x"/></svg></button>
+  </label>
+  <button id="themeBtn" class="iconbtn glass" aria-label="Switch to light mode" title="Toggle light / dark"><svg class="ic"><use href="#i-sun"/></svg></button>
+  <button id="filtertoggle" class="iconbtn glass" aria-label="More filters" aria-haspopup="dialog"><svg class="ic"><use href="#i-sliders"/></svg><span class="dot" id="fcount" hidden></span></button>
  </div>
- <div id="mapwrap"><div id="map"></div><div id="toast"></div>
-  <div id="a2hs" role="note"><button id="a2hsClose" aria-label="Dismiss">×</button>📲 <b>Install this app:</b> tap <span class="shr">Share ⬆</span> in Safari, then <b>Add to Home Screen</b>.</div></div>
-</div>
+ <div id="mode" class="seg glass" role="radiogroup" aria-label="Category">
+  <span class="seg-ind" aria-hidden="true"></span>
+  <button data-mode="all" role="radio" class="on" aria-checked="true"><span class="lbl">All</span></button>
+  <button data-mode="hh" role="radio" aria-checked="false"><svg class="ic"><use href="#i-hh"/></svg><span class="lbl">Happy hr</span></button>
+  <button data-mode="br" role="radio" aria-checked="false"><svg class="ic"><use href="#i-br"/></svg><span class="lbl">Brunch</span></button>
+  <button data-mode="ln" role="radio" aria-checked="false"><svg class="ic"><use href="#i-ln"/></svg><span class="lbl">Late</span></button>
+ </div>
+ <div class="chips" id="chips" role="toolbar" aria-label="Quick filters">
+  <button id="installBtn" class="chip install" hidden><svg class="ic"><use href="#i-download"/></svg>Install app</button>
+  <button id="now" class="chip" aria-pressed="false" title="Uses Las Vegas time and the parsed days/times"><span class="live"></span>Happening now</button>
+  <button id="ikChip" class="chip" aria-pressed="false"><svg class="ic"><use href="#i-gift"/></svg>inKind</button>
+  <button id="r4Chip" class="chip" aria-pressed="false"><svg class="ic star"><use href="#i-star"/></svg>4.0+</button>
+  <span class="chipsep" aria-hidden="true"></span>
+  <span id="days" class="daychips" role="group" aria-label="Days"></span>
+ </div>
+</header>
+
+<section id="sheet" aria-label="Venue list">
+ <div class="sheet-grab" id="grab">
+  <button class="handle" id="handle" aria-label="Expand or collapse list"><span></span></button>
+  <div class="sheet-head">
+   <div><h2 id="count">Loading spots…</h2><p id="status" aria-live="polite">Fetching the latest list</p></div>
+   <button id="sortBtn" class="pill-btn" hidden></button>
+  </div>
+ </div>
+ <div id="list" role="list">
+  <div class="card skel"><div class="thumb"></div><div class="body"><i></i><i></i><i></i></div></div>
+  <div class="card skel"><div class="thumb"></div><div class="body"><i></i><i></i><i></i></div></div>
+  <div class="card skel"><div class="thumb"></div><div class="body"><i></i><i></i><i></i></div></div>
+  <div class="card skel"><div class="thumb"></div><div class="body"><i></i><i></i><i></i></div></div>
+  <div class="card skel"><div class="thumb"></div><div class="body"><i></i><i></i><i></i></div></div>
+ </div>
+</section>
+
+<button id="loc" class="fab glass" aria-label="Use my location"><svg class="ic"><use href="#i-locate"/></svg></button>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<div id="a2hs" class="glass" role="note"><img src="icons/icon-192.png" alt="" width="40" height="40"><div><b>Install the app</b><span>Tap <svg class="ic inl"><use href="#i-share"/></svg> Share, then <b>Add to Home Screen</b></span></div><button id="a2hsClose" class="iconbtn sm" aria-label="Dismiss"><svg class="ic"><use href="#i-x"/></svg></button></div>
+
+<div id="scrim" hidden></div>
+<section id="detail" role="dialog" aria-modal="false" aria-labelledby="dName" hidden>
+ <div class="detail-grab" id="dgrab"><span class="handle-bar"></span><span class="mini" id="dMini" aria-hidden="true"></span></div>
+ <button id="dClose" class="iconbtn glass dclose" aria-label="Close details"><svg class="ic"><use href="#i-x"/></svg></button>
+ <div id="dBody" class="dbody"></div>
+</section>
+
+<section id="filters" role="dialog" aria-modal="true" aria-labelledby="fTitle" hidden>
+ <div class="fhead"><h2 id="fTitle">Filters</h2><button id="fClose" class="iconbtn" aria-label="Close filters"><svg class="ic"><use href="#i-x"/></svg></button></div>
+ <div class="fbody">
+  <div class="fgroup"><h3>Minimum rating</h3>
+   <div class="seg small" id="rating" role="radiogroup" aria-label="Minimum rating">
+    <button data-r="0" role="radio" class="on" aria-checked="true">Any</button><button data-r="3.5" role="radio" aria-checked="false">3.5+</button><button data-r="4" role="radio" aria-checked="false">4.0+</button><button data-r="4.5" role="radio" aria-checked="false">4.5+</button>
+   </div></div>
+  <div class="fgroup"><h3><label for="zip">ZIP code</label></h3>
+   <div class="selectwrap"><select id="zip"><option value="">All ZIP codes</option></select></div></div>
+  <div class="fgroup"><h3>Show only</h3>
+   <label class="switch"><span><b>On inKind</b><small>Restaurants in inKind’s Las Vegas list (checked Oct 9, 2026)</small></span><input type="checkbox" id="ikOnly" role="switch"><i></i></label>
+   <label class="switch"><span><b>On 2+ lists</b><small>e.g. happy hour and brunch</small></span><input type="checkbox" id="bothOnly" role="switch"><i></i></label>
+   <label class="switch"><span><b>Exact addresses</b><small>Hide approximate pins (casino-only address or ZIP center)</small></span><input type="checkbox" id="exactOnly" role="switch"><i></i></label>
+  </div>
+  <div class="fgroup"><h3>Appearance</h3>
+   <div class="seg small" id="themeSeg" role="radiogroup" aria-label="Theme">
+    <button data-t="dark" role="radio">Dark</button><button data-t="light" role="radio">Light</button><button data-t="system" role="radio">System</button>
+   </div></div>
+  <div class="fgroup"><h3>Map key</h3>
+   <ul class="legend">
+    <li><span class="mk hh"><i></i></span>Happy hour</li>
+    <li><span class="mk br"><i></i></span>Brunch</li>
+    <li><span class="mk ln"><i></i></span>Late night / reverse HH</li>
+    <li><span class="mk multi"><i style="background:conic-gradient(var(--hh) 0 50%,var(--br) 0)"></i></span>On several lists</li>
+    <li><span class="mk hh ik"><i></i></span>Teal ring = on inKind</li>
+    <li><span class="mk hh approx"><i></i></span>Dashed ring = approximate spot</li>
+    <li><span class="you-dot"></span>You</li>
+   </ul></div>
+  <button id="installBtn2" class="btn ghost wide" hidden><svg class="ic"><use href="#i-download"/></svg>Install app</button>
+  <p class="about" id="about"></p>
+ </div>
+ <div class="ffoot"><button id="reset" class="btn ghost">Reset all</button><button id="fApply" class="btn primary">Show spots</button></div>
+</section>
+
 <script src="vendor/leaflet.js"></script>
 <script src="vendor/leaflet.markercluster.js"></script>
+<script src="vendor/maplibre-gl.js"></script>
+<script src="vendor/leaflet-maplibre-gl.js"></script>
 <script src="app.js"></script>
 </body></html>

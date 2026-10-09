@@ -1,37 +1,101 @@
+// Headless test for the Vegas Happy Hours PWA (2026 redesign).
+// Usage: python3 -m http.server 8765 &  node tools/test_pwa.mjs [url] [shotDir]
 import pkg from '/node_modules/playwright-core/index.js'; const { chromium, devices } = pkg;
 const URL = process.argv[2] || 'http://127.0.0.1:8765/';
-const SHOT = process.argv[3] || '/workspace/pwa_mobile_screenshot.png';
+const DIR = process.argv[3] || '/workspace';
 const b = await chromium.launch({executablePath:'/opt/google/chrome/chrome', headless:true, args:['--no-sandbox','--disable-dev-shm-usage']});
-const ctx = await b.newContext({...devices['iPhone 13'], geolocation:{latitude:36.1070,longitude:-115.1760}, permissions:['geolocation']});
-const p = await ctx.newPage(); const errs=[];
-p.on('pageerror',e=>errs.push('pageerror '+e.message)); p.on('console',m=>{if(m.type()==='error')errs.push('console '+m.text())});
-await p.goto(URL,{waitUntil:'networkidle',timeout:90000});
-await p.waitForFunction(()=>window.__vhh,null,{timeout:30000});
-const st=()=>p.evaluate(()=>({status:document.getElementById('status').textContent,vis:__vhh.visible(),onMap:__vhh.onMap()}));
-console.log('load', await p.evaluate(()=>({n:__vhh.count,nIK:__vhh.nIK,nHH:__vhh.nHH,nBR:__vhh.nBR,nLN:__vhh.nLN,markers:__vhh.markers()})), await st());
-const sw = await p.evaluate(async()=>{const r=await navigator.serviceWorker.ready;return {scope:r.scope,active:!!r.active}});
-console.log('sw', sw);
-const man = await p.evaluate(async()=>{const l=document.querySelector('link[rel=manifest]');const m=await (await fetch(l.href)).json();return {name:m.name,short:m.short_name,display:m.display,start:m.start_url,scope:m.scope,icons:m.icons.map(i=>i.sizes+':'+(i.purpose||'any'))}});
-console.log('manifest', man);
-const meta = await p.evaluate(()=>['theme-color','apple-mobile-web-app-capable','viewport'].map(n=>n+'='+document.querySelector(`meta[name="${n}"]`)?.content).concat([document.querySelector('link[rel=apple-touch-icon]')?.href]));
-console.log('meta', meta, 'a2hs visible', await p.evaluate(()=>getComputedStyle(document.getElementById('a2hs')).display));
-// features
-for (const m of ['hh','br','ln','all']) { await p.click(`#mode button[data-mode=${m}]`); await p.waitForTimeout(250); console.log(' mode',m,(await st()).status); }
-await p.click('#filtertoggle'); await p.waitForTimeout(200);
-await p.click('#ikOnly'); await p.waitForTimeout(300); console.log('ikOnly', (await st()).status);
-await p.click('#ikOnly'); await p.click('#now'); await p.waitForTimeout(300); console.log('now', (await st()).status); await p.click('#now');
-await p.click('#filtertoggle'); await p.waitForTimeout(200);
-await p.click('#loc'); await p.waitForTimeout(2500);
-console.log('nearest', await p.evaluate(()=>[...document.querySelectorAll('#list .item')].slice(0,3).map(e=>e.innerText.replace(/\n/g,' | ').slice(0,120))));
-await p.waitForTimeout(2500);
-await p.screenshot({path:SHOT});
-// offline reload
-await p.reload({waitUntil:'networkidle'}); await p.waitForTimeout(1500); // ensure SW controls page
-console.log('controlled', await p.evaluate(()=>!!navigator.serviceWorker.controller));
-console.log('caches', await p.evaluate(async()=>{const o={};for(const k of await caches.keys()){o[k]=(await (await caches.open(k)).keys()).length}return o}));
-await ctx.setOffline(true);
-await p.reload({waitUntil:'load'}); await p.waitForFunction(()=>window.__vhh,null,{timeout:20000}).catch(()=>{});
-console.log('offline', await p.evaluate(()=>window.__vhh?{n:__vhh.count,markers:__vhh.markers(),status:document.getElementById('status').textContent}:'FAILED'));
-await ctx.setOffline(false);
-console.log('errors', errs.filter(e=>!/tile|ERR_INTERNET_DISCONNECTED|Failed to load resource/.test(e)), 'allErrCount', errs.length);
+let fails = 0; const ok = (c, msg) => { console.log((c ? 'PASS ' : 'FAIL ') + msg); if (!c) fails++; };
+const EXPECT = {n:738, markers:733, nHH:657, nBR:110, nLN:167, nIK:76};
+
+async function session(ctxOpts, fn) {
+  const ctx = await b.newContext({...ctxOpts, geolocation:{latitude:36.1070, longitude:-115.1760}, permissions:['geolocation']});
+  const p = await ctx.newPage(); const errs = [];
+  p.on('pageerror', e => errs.push('pageerror ' + e.message)); p.on('console', m => { if (m.type() === 'error') errs.push('console ' + m.text()); });
+  await p.goto(URL, {waitUntil:'networkidle', timeout:90000});
+  await p.waitForFunction(() => window.__vhh, null, {timeout:30000});
+  await fn(p, ctx);
+  const real = errs.filter(e => !/ERR_INTERNET_DISCONNECTED|Failed to load resource|tiles\.openfreemap|Failed to fetch|AJAXError/.test(e));
+  ok(real.length === 0, 'no JS errors (' + (real.join(' | ') || 'none') + ')');
+  await ctx.close();
+}
+const st = p => p.evaluate(() => ({count:document.getElementById('count').textContent, vis:__vhh.visible(), onMap:__vhh.onMap()}));
+const clickMode = async (p, m) => { await p.click(`#mode button[data-mode=${m}]`); await p.waitForTimeout(250); return st(p); };
+
+// ---------------- mobile (iPhone 13) ----------------
+await session(devices['iPhone 13'], async (p, ctx) => {
+  const c = await p.evaluate(() => ({n:__vhh.count, nIK:__vhh.nIK, nHH:__vhh.nHH, nBR:__vhh.nBR, nLN:__vhh.nLN, markers:__vhh.markers()}));
+  for (const k in EXPECT) ok(c[k] === EXPECT[k], `count ${k}=${c[k]} (expect ${EXPECT[k]})`);
+  ok((await st(p)).vis === 738 && (await st(p)).onMap === 733, 'all 738 listed / 733 pins on map at start');
+  const sw = await p.evaluate(async () => { const r = await navigator.serviceWorker.ready; return !!r.active; }); ok(sw, 'service worker active');
+  const man = await p.evaluate(async () => { const m = await (await fetch('manifest.webmanifest')).json(); return m.display + ' ' + m.icons.length; }); ok(man === 'standalone 4', 'manifest ' + man);
+  ok(await p.evaluate(() => document.getElementById('a2hs').classList.contains('show')), 'iOS add-to-home hint shown');
+  for (const [m, n] of [['hh',657],['br',110],['ln',167],['all',738]]) { const s = await clickMode(p, m); ok(s.vis === n, `mode ${m}: ${s.vis}`); }
+  await p.click('#ikChip'); await p.waitForTimeout(250); ok((await st(p)).vis === 76, 'inKind chip -> ' + (await st(p)).vis);
+  await p.click('#ikChip'); await p.waitForTimeout(250);
+  await p.evaluate(() => __vhh.setNow(1, 90)); // Tue 1:30 AM Vegas time
+  await p.click('#now'); await p.waitForTimeout(250); const lateNow = (await st(p)).vis; ok(lateNow > 0, 'happening now (Tue 1:30 AM) -> ' + lateNow);
+  await p.click('#now'); await p.evaluate(() => __vhh.setNow(null)); await p.waitForTimeout(250);
+  await p.click('#r4Chip'); await p.waitForTimeout(250); const r4 = (await st(p)).vis; ok(r4 > 0 && r4 < 738, 'rating 4.0+ -> ' + r4); await p.click('#r4Chip');
+  await p.click('#days .chip:nth-child(1)'); await p.waitForTimeout(250); const mon = (await st(p)).vis; ok(mon > 0 && mon < 738, 'Mon chip -> ' + mon); await p.click('#days .chip:nth-child(1)');
+  await p.fill('#q', 'oyster'); await p.waitForTimeout(500); const oy = (await st(p)).vis; ok(oy > 0 && oy < 100, 'search oyster -> ' + oy);
+  await p.click('#qclear'); await p.waitForTimeout(400);
+  // filters sheet
+  await p.click('#filtertoggle'); await p.waitForTimeout(500);
+  ok(await p.isVisible('#filters'), 'filters sheet opens');
+  await p.click('label.switch:has(#bothOnly)'); await p.waitForTimeout(250); const both = (await st(p)).vis; ok(both === await p.evaluate(() => __vhh.nBoth), 'on 2+ lists -> ' + both);
+  await p.click('label.switch:has(#bothOnly)');
+  await p.click('label.switch:has(#exactOnly)'); await p.waitForTimeout(250); const ex = (await st(p)).vis; ok(ex < 738, 'exact addresses only -> ' + ex);
+  await p.click('label.switch:has(#exactOnly)');
+  await p.selectOption('#zip', '89158'); await p.waitForTimeout(250); const z = (await st(p)).vis; ok(z > 0 && z < 60, 'zip 89158 -> ' + z);
+  await p.click('#reset'); await p.waitForTimeout(400); ok((await st(p)).vis === 738, 'reset -> 738');
+  await p.click('#fApply'); await p.waitForTimeout(500);
+  // empty state
+  await p.fill('#q', 'zzzxxyy'); await p.waitForTimeout(500); ok(await p.isVisible('.empty'), 'empty state shown'); await p.click('#emptyReset'); await p.waitForTimeout(400);
+  // geolocation
+  await p.click('#loc'); await p.waitForTimeout(2500);
+  const near = await p.evaluate(() => [...document.querySelectorAll('#list .card')].slice(0, 3).map(e => e.querySelector('h3').textContent + ' ' + (e.querySelector('.dist')||{}).textContent));
+  ok(near.length === 3 && near.every(t => /mi$/.test(t)), 'nearest-first: ' + near.join(' | '));
+  // tap targets
+  const small = await p.evaluate(() => [...document.querySelectorAll('#topbar button, .fab, #sheet .pill-btn')].filter(e => e.offsetParent && e.getBoundingClientRect().height < 34).map(e => e.id || e.className));
+  ok(small.length === 0, 'tap targets >= 34px tall in top bar (' + small.join(',') + ')');
+  // screenshot: list sheet half open over map (dismiss install hint + toast first)
+  await p.click('#a2hsClose'); await p.evaluate(() => { document.getElementById('chips').scrollLeft = 0; }); await p.waitForTimeout(4500);
+  await p.screenshot({path: DIR + '/redesign_mobile_list.png'});
+  // sheet states
+  for (const s of ['peek', 'full', 'half']) { await p.evaluate(s => __vhh.sheet(s), s); await p.waitForTimeout(500); }
+  ok(await p.evaluate(() => __vhh.sheet()) === 'half', 'sheet snaps peek/full/half');
+  // detail
+  const id = await p.evaluate(() => __vhh.find('Bardot Brasserie'));
+  await p.click(`#list .card[data-id="${id}"]`).catch(async () => { await p.evaluate(i => __vhh.open(i), id); });
+  await p.waitForTimeout(1800);
+  ok(await p.isVisible('#detail.show'), 'detail sheet opens');
+  ok(await p.evaluate(() => !!document.querySelector('#dBody a.btn.primary[href*="google.com/maps/dir"]')), 'directions button present');
+  await p.screenshot({path: DIR + '/redesign_mobile_detail.png'});
+  await p.click('#dClose'); await p.waitForTimeout(500); ok(!(await p.isVisible('#detail.show')), 'detail closes');
+  // offline reload
+  await p.reload({waitUntil:'networkidle'}); await p.waitForTimeout(1500);
+  ok(await p.evaluate(() => !!navigator.serviceWorker.controller), 'page controlled by SW');
+  console.log('caches', await p.evaluate(async () => { const o = {}; for (const k of await caches.keys()) o[k] = (await (await caches.open(k)).keys()).length; return o; }));
+  await ctx.setOffline(true);
+  await p.reload({waitUntil:'load'}); await p.waitForFunction(() => window.__vhh, null, {timeout:20000}).catch(() => {});
+  const off = await p.evaluate(() => window.__vhh ? {n:__vhh.count, markers:__vhh.markers()} : null);
+  ok(off && off.n === 738 && off.markers === 733, 'offline reload works ' + JSON.stringify(off));
+  await ctx.setOffline(false);
+});
+
+// ---------------- desktop ----------------
+await session({viewport:{width:1440, height:900}, deviceScaleFactor:2}, async p => {
+  const c = await p.evaluate(() => ({n:__vhh.count, markers:__vhh.markers(), nIK:__vhh.nIK}));
+  ok(c.n === 738 && c.markers === 733 && c.nIK === 76, 'desktop counts ' + JSON.stringify(c));
+  for (const [m, n] of [['hh',657],['br',110],['ln',167],['all',738]]) { const s = await clickMode(p, m); ok(s.vis === n, `desktop mode ${m}: ${s.vis}`); }
+  await p.click('#loc'); await p.waitForTimeout(2500);
+  const id = await p.evaluate(() => __vhh.find('Ocean Prime'));
+  await p.click(`#list .card[data-id="${id}"]`); await p.waitForTimeout(2000);
+  ok(await p.isVisible('#detail.show'), 'desktop detail panel opens');
+  const ov = await p.evaluate(() => { const a = document.getElementById('sheet').getBoundingClientRect(), d = document.getElementById('detail').getBoundingClientRect(); return d.left >= a.right - 1; });
+  ok(ov, 'detail panel sits beside list (no overlap)');
+  await p.screenshot({path: DIR + '/redesign_desktop.png'});
+});
 await b.close();
+console.log(fails ? `\n${fails} FAILED` : '\nALL PASS');
+process.exit(fails ? 1 : 0);
