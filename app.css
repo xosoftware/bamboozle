@@ -13,8 +13,8 @@
  --surface:#12121c;--card:#191926;--card-h:#20202f;--card-on:#262640;
  --text:#f4f4fb;--muted:#a3a3b8;--faint:#6e6e86;--line:rgba(255,255,255,.07);
  --chip:rgba(255,255,255,.06);--chip-h:rgba(255,255,255,.11);
- --hh:#4d8dff;--br:#ff4fa3;--ln:#a463ff;--ik:#2dd4bf;--now:#34d399;--warn:#fbbf24;--star:#fcc54b;
- --hh-fg:#a9c8ff;--br-fg:#ffb0d4;--ln-fg:#d3b6ff;--ik-fg:#8ff0e2;--now-fg:#8ef0c6;--warn-fg:#fde08a;
+ --hh:#4d8dff;--br:#ff4fa3;--ln:#a463ff;--ik:#e6b84a;--now:#34d399;--warn:#fbbf24;--star:#fcc54b;
+ --hh-fg:#a9c8ff;--br-fg:#ffb0d4;--ln-fg:#d3b6ff;--ik-fg:#000000;--now-fg:#8ef0c6;--warn-fg:#fde08a;
  --shadow:0 10px 40px rgba(0,0,0,.55),0 2px 8px rgba(0,0,0,.4);
  --map-bg:#0e0e14;
 }
@@ -24,8 +24,8 @@
  --surface:#f6f6fa;--card:#ffffff;--card-h:#f6f5fd;--card-on:#efeafe;
  --text:#14141f;--muted:#565670;--faint:#8a8aa0;--line:rgba(20,20,60,.08);
  --chip:rgba(20,20,60,.05);--chip-h:rgba(20,20,60,.09);
- --hh:#2f6bff;--br:#e0287f;--ln:#7c3aed;--ik:#0d9488;--now:#059669;--warn:#b45309;--star:#f59e0b;
- --hh-fg:#1f4fd1;--br-fg:#b51d64;--ln-fg:#6327c9;--ik-fg:#0b7268;--now-fg:#047857;--warn-fg:#92400e;
+ --hh:#2f6bff;--br:#e0287f;--ln:#7c3aed;--ik:#e6b84a;--now:#059669;--warn:#b45309;--star:#f59e0b;
+ --hh-fg:#1f4fd1;--br-fg:#b51d64;--ln-fg:#6327c9;--ik-fg:#000000;--now-fg:#047857;--warn-fg:#92400e;
  --shadow:0 10px 36px rgba(30,20,80,.16),0 2px 6px rgba(30,20,80,.08);
  --map-bg:#e8e8ee;
 }
@@ -111,8 +111,8 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .chip:hover{background:var(--glass-strong)}
 .chip[aria-pressed=true]{background:var(--grad);border-color:transparent;color:#fff;box-shadow:0 4px 14px rgba(168,85,247,.4)}
 #now[aria-pressed=true]{background:linear-gradient(120deg,#059669,#10b981);box-shadow:0 4px 14px rgba(16,185,129,.4)}
-#ikChip[aria-pressed=true]{background:linear-gradient(120deg,#0d9488,#14b8a6);box-shadow:0 4px 14px rgba(20,184,166,.4)}
-#ikChip .ic{color:var(--ik)}#ikChip[aria-pressed=true] .ic{color:#fff}
+#ikChip[aria-pressed=true]{background:#e6b84a;color:#000;box-shadow:0 4px 14px rgba(230,184,74,.4)}
+#ikChip .ic{color:var(--ik)}#ikChip[aria-pressed=true] .ic{color:#000}
 .chip .star{color:var(--star);fill:var(--star);stroke:none}.chip[aria-pressed=true] .star{color:#fff;fill:#fff}
 .chip.install{background:var(--grad);color:#fff;border-color:transparent}
 .live{width:8px;height:8px;border-radius:50%;background:var(--now);box-shadow:0 0 0 0 var(--now);animation:live 1.8s infinite}
@@ -152,7 +152,7 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .b.hh{background:color-mix(in srgb,var(--hh) 18%,transparent);color:var(--hh-fg)}
 .b.br{background:color-mix(in srgb,var(--br) 18%,transparent);color:var(--br-fg)}
 .b.ln{background:color-mix(in srgb,var(--ln) 20%,transparent);color:var(--ln-fg)}
-.b.ik{background:color-mix(in srgb,var(--ik) 18%,transparent);color:var(--ik-fg)}
+.b.ik{background:#e6b84a;color:#000}
 .b.ik.unc{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn-fg)}
 .b.now{background:color-mix(in srgb,var(--now) 20%,transparent);color:var(--now-fg)}
 .b.now::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--now)}
@@ -235,7 +235,7 @@ body.sheet-full .fab{opacity:0;pointer-events:none}
 .btn:hover{filter:brightness(1.08)}
 .btn .ic{width:18px;height:18px}
 .btn.primary{background:var(--grad);color:#fff;box-shadow:0 6px 20px rgba(168,85,247,.38)}
-.btn.teal{background:linear-gradient(120deg,#0d9488,#14b8a6);color:#fff;box-shadow:0 6px 20px rgba(20,184,166,.3)}
+.btn.teal{background:#e6b84a;color:#000;box-shadow:0 6px 20px rgba(230,184,74,.35)}
 .btn.ghost{background:var(--chip);border-color:var(--line);color:var(--text)}
 .btn.wide{width:100%}
 .panel{border-radius:18px;background:var(--card);border:1px solid var(--line);padding:14px 16px;position:relative;overflow:hidden}
@@ -272,7 +272,7 @@ details.conf a{color:var(--muted)}
 .src:hover{color:var(--text)}
 .panel.ikp{background:color-mix(in srgb,var(--ik) 10%,var(--card));border-color:color-mix(in srgb,var(--ik) 30%,transparent)}
 .panel.ikp h4{color:var(--ik-fg)}
-.panel.ikp .pi{background:var(--ik)}
+.panel.ikp .pi{background:var(--ik);color:#000}
 .panel p{margin:0;font-size:13.5px}
 .muted{color:var(--muted)}
 .addr{display:flex;gap:8px;align-items:flex-start;font-size:13.5px}

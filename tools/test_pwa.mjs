@@ -74,6 +74,12 @@ await session(devices['iPhone 13'], async (p, ctx) => {
     return bi === kids.length - 1 && kids.indexOf('r2') < bi && (kids.indexOf('deal') === -1 || kids.indexOf('deal') < bi);
   }), 'badges are last in card body');
   ok(await p.evaluate(() => ![...document.querySelectorAll('#list .card .badges .b')].some(e => /^Unverified$/i.test(e.textContent.trim()))), 'list cards have no Unverified badge');
+  ok(await p.evaluate(() => {
+    const el = [...document.querySelectorAll('#list .card .badges .b.ik')].find(e => e.textContent.trim()==='inKind');
+    if (!el) return false;
+    const cs = getComputedStyle(el);
+    return cs.backgroundColor === 'rgb(230, 184, 74)' && (cs.color === 'rgb(0, 0, 0)' || cs.color === 'rgb(0,0,0)');
+  }), 'inKind badge is gold #e6b84a on black text');
   // detail: Unverified only inside collapsed Confidence & notes, never as a flag banner / hero badge
   const eataly = await p.evaluate(() => __vhh.find('Eataly'));
   ok(eataly >= 0, 'Eataly present for late-night derive check');
