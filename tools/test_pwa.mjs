@@ -31,6 +31,12 @@ await session(devices['iPhone 13'], async (p, ctx) => {
   ok(man.d === 'standalone' && man.n === 4, 'manifest ' + man.d + ' ' + man.n);
   ok(man.name === 'BamBoozle' && man.short === 'BamBoozle', 'manifest name BamBoozle (' + man.name + '/' + man.short + ')');
   ok(await p.evaluate(() => document.title === 'BamBoozle' && document.querySelector('meta[name="apple-mobile-web-app-title"]').content === 'BamBoozle'), 'document title / apple title BamBoozle');
+  ok(await p.evaluate(() => {
+    const app = document.querySelector('meta[name="application-name"]');
+    const og = document.querySelector('meta[property="og:site_name"]');
+    const ml = document.querySelector('link[rel="manifest"]');
+    return app && app.content === 'BamBoozle' && og && og.content === 'BamBoozle' && ml && /manifest\.webmanifest\?v=[a-f0-9]+$/.test(ml.href);
+  }), 'application-name / og:site_name BamBoozle + cache-busted manifest');
   ok(await p.evaluate(() => document.querySelector('#topbar h1').textContent === 'BamBoozle'), 'header brand BamBoozle');
   ok(await p.evaluate(() => document.getElementById('a2hs').classList.contains('show')), 'iOS add-to-home hint shown');
   ok(await p.evaluate(() => document.querySelector('#a2hs b').textContent.includes('BamBoozle')), 'iOS hint mentions BamBoozle');

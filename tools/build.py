@@ -18,8 +18,19 @@ if '--from-html' in sys.argv:
     recs = json.loads(t[s:e].replace('<\\/', '</'))
     json.dump(recs, open('data.json', 'w'), ensure_ascii=False, separators=(',', ':'))
 files = ['index.html', 'app.css', 'app.js', 'data.json', 'manifest.webmanifest', 'fonts/inter-latin-wght.woff2'] + sorted('icons/' + f for f in os.listdir('icons'))
-hsh = hashlib.sha256(b''.join(open(f, 'rb').read() for f in files)).hexdigest()[:10]
+def _bytes(f):
+    data = open(f, 'rb').read()
+    # Ignore the cache-bust query we rewrite below so VERSION stays stable across rebuilds.
+    if f == 'index.html':
+        data = re.sub(br'(href="manifest\.webmanifest)(?:\?v=[^"]*)?(")', br'\1\2', data)
+    return data
+hsh = hashlib.sha256(b''.join(_bytes(f) for f in files)).hexdigest()[:10]
 sw = open('sw.js').read()
 sw = re.sub(r"const VERSION = '[^']*';", f"const VERSION = 'v2-{hsh}';", sw)
 open('sw.js', 'w').write(sw)
-print('built; cache version v2-' + hsh, '; venues', len(json.load(open('data.json'))))
+idx = open('index.html').read()
+idx2, n = re.subn(r'(href="manifest\.webmanifest)(?:\?v=[^"]*)?(")', r'\1?v=' + hsh + r'\2', idx, count=1)
+if n != 1:
+    raise SystemExit('expected one manifest link in index.html, found %d' % n)
+open('index.html', 'w').write(idx2)
+print('built; cache version v2-' + hsh, '; manifest ?v=' + hsh, '; venues', len(json.load(open('data.json'))))

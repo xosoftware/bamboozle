@@ -1,5 +1,5 @@
 /* BamBoozle service worker. VERSION is bumped by tools/build.py on every build. */
-const VERSION = 'v2-0d9028069c';
+const VERSION = 'v2-92f3861103';
 const SHELL_CACHE = 'vhh-shell-' + VERSION;
 const TILE_CACHE = 'vhh-tiles-v2';
 const RUNTIME_CACHE = 'vhh-runtime-v1';
@@ -55,7 +55,10 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
   if (url.origin === self.location.origin) {
     // HTML + data: network-first so updates show up; everything else: cache-first from the shell cache
-    if (req.mode === 'navigate' || url.pathname.endsWith('/data.json') || url.pathname.endsWith('/app.js') || url.pathname.endsWith('/app.css') || url.pathname.endsWith('/index.html')) {
+    // HTML + JS/CSS + data + web manifest: network-first so rename / deal updates land quickly
+    const path = url.pathname;
+    const isShellDoc = req.mode === 'navigate' || path.endsWith('/index.html') || path.endsWith('/') || path.endsWith('/data.json') || path.endsWith('/app.js') || path.endsWith('/app.css') || path.endsWith('/manifest.webmanifest');
+    if (isShellDoc) {
       e.respondWith(networkFirst(req));
     } else {
       e.respondWith(caches.open(SHELL_CACHE).then(c => c.match(req, {ignoreSearch: true})).then(hit => hit || networkFirst(req)));
