@@ -5,7 +5,7 @@ const URL = process.argv[2] || 'http://127.0.0.1:8765/';
 const DIR = process.argv[3] || '/workspace';
 const b = await chromium.launch({executablePath:'/opt/google/chrome/chrome', headless:true, args:['--no-sandbox','--disable-dev-shm-usage']});
 let fails = 0; const ok = (c, msg) => { console.log((c ? 'PASS ' : 'FAIL ') + msg); if (!c) fails++; };
-const EXPECT = {n:738, markers:733, nHH:657, nBR:110, nLN:167, nIK:76};
+const EXPECT = {n:738, markers:733, nHH:657, nBR:110, nLN:176, nIK:76};
 
 async function session(ctxOpts, fn) {
   const ctx = await b.newContext({...ctxOpts, geolocation:{latitude:36.1070, longitude:-115.1760}, permissions:['geolocation']});
@@ -40,7 +40,7 @@ await session(devices['iPhone 13'], async (p, ctx) => {
   ok(await p.evaluate(() => document.querySelector('#topbar h1').textContent === 'BamBoozle'), 'header brand BamBoozle');
   ok(await p.evaluate(() => document.getElementById('a2hs').classList.contains('show')), 'iOS add-to-home hint shown');
   ok(await p.evaluate(() => document.querySelector('#a2hs b').textContent.includes('BamBoozle')), 'iOS hint mentions BamBoozle');
-  for (const [m, n] of [['hh',657],['br',110],['ln',167],['all',738]]) { const s = await clickMode(p, m); ok(s.vis === n, `mode ${m}: ${s.vis}`); }
+  for (const [m, n] of [['hh',657],['br',110],['ln',176],['all',738]]) { const s = await clickMode(p, m); ok(s.vis === n, `mode ${m}: ${s.vis}`); }
   await p.click('#ikChip'); await p.waitForTimeout(250); ok((await st(p)).vis === 76, 'inKind chip -> ' + (await st(p)).vis);
   await p.click('#ikChip'); await p.waitForTimeout(250);
   await p.evaluate(() => __vhh.setNow(1, 90)); // Tue 1:30 AM Vegas time
@@ -73,6 +73,19 @@ await session(devices['iPhone 13'], async (p, ctx) => {
     const bi = kids.indexOf('badges');
     return bi === kids.length - 1 && kids.indexOf('r2') < bi && (kids.indexOf('deal') === -1 || kids.indexOf('deal') < bi);
   }), 'badges are last in card body');
+  ok(await p.evaluate(() => ![...document.querySelectorAll('#list .card .badges .b')].some(e => /^Unverified$/i.test(e.textContent.trim()))), 'list cards have no Unverified badge');
+  // detail: Unverified only inside collapsed Confidence & notes, never as a flag banner / hero badge
+  const eataly = await p.evaluate(() => __vhh.find('Eataly'));
+  ok(eataly >= 0, 'Eataly present for late-night derive check');
+  await p.evaluate(i => __vhh.open(i), eataly);
+  await p.waitForTimeout(800);
+  ok(await p.evaluate(() => {
+    const flags = [...document.querySelectorAll('#dBody .flag')].map(e => e.textContent);
+    const hero = document.querySelector('#dBody .hero .kicker')?.textContent || '';
+    const conf = [...document.querySelectorAll('#dBody details.conf')].map(e => e.textContent).join(' ');
+    return !flags.some(t => /Unverified/i.test(t)) && !/Unverified/i.test(hero) && /Late night|Evening/i.test(document.querySelector('#dBody')?.textContent||'');
+  }), 'detail has late night for Eataly; Unverified not in header/flags');
+  await p.click('#dClose'); await p.waitForTimeout(400);
   // tap targets
   const small = await p.evaluate(() => [...document.querySelectorAll('#topbar button, .fab, #sheet .pill-btn')].filter(e => e.offsetParent && e.getBoundingClientRect().height < 34).map(e => e.id || e.className));
   ok(small.length === 0, 'tap targets >= 34px tall in top bar (' + small.join(',') + ')');
@@ -106,7 +119,7 @@ await session(devices['iPhone 13'], async (p, ctx) => {
 await session({viewport:{width:1440, height:900}, deviceScaleFactor:2}, async p => {
   const c = await p.evaluate(() => ({n:__vhh.count, markers:__vhh.markers(), nIK:__vhh.nIK}));
   ok(c.n === 738 && c.markers === 733 && c.nIK === 76, 'desktop counts ' + JSON.stringify(c));
-  for (const [m, n] of [['hh',657],['br',110],['ln',167],['all',738]]) { const s = await clickMode(p, m); ok(s.vis === n, `desktop mode ${m}: ${s.vis}`); }
+  for (const [m, n] of [['hh',657],['br',110],['ln',176],['all',738]]) { const s = await clickMode(p, m); ok(s.vis === n, `desktop mode ${m}: ${s.vis}`); }
   await p.click('#loc'); await p.waitForTimeout(2500);
   const id = await p.evaluate(() => __vhh.find('Ocean Prime'));
   await p.click(`#list .card[data-id="${id}"]`); await p.waitForTimeout(2000);

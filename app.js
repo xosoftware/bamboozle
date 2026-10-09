@@ -218,8 +218,6 @@ function cardHtml(v){
   var bd='';if(now)bd+='<span class="b now">Now</span>';
   c.forEach(function(x){bd+='<span class="b '+x+'">'+CATN[x]+'</span>'});
   if(v.ik)bd+='<span class="b ik'+(onIK(v)?'':' unc')+'">'+(onIK(v)?'inKind':'inKind?')+'</span>';
-  var unv=(c.indexOf('br')>=0&&v.br.conf==='editorial')||(c.indexOf('ln')>=0&&/^UNVERIFIED/.test(v.ln.conf||''));
-  if(unv)bd+='<span class="b muted" title="Aggregator/editorial-only listing">Unverified</span>';
   if(v.approx)bd+='<span class="b muted" title="'+esc(v.q)+'">Approx. pin</span>';
   h+='<div class="badges">'+bd+'</div>';
   return h+'</div></article>';
@@ -263,16 +261,15 @@ function setActive(id){
 function flagHtml(t){return '<div class="flag">'+icon('info')+'<div>'+t+'</div></div>'}
 function confFlags(v,k){
   var c=v[k],h='';
-  if(k==='br'&&c.conf==='editorial')h+=flagHtml('<b>Unverified</b> — from an editorial roundup / aggregator only. Check before you go.');
+  // Unverified is only shown inside the collapsed Confidence & notes section (see confText).
   if(k==='ln'){var f=c.conf||'';
-    if(/^UNVERIFIED/.test(f))h+=flagHtml('<b>Unverified</b> — aggregator/editorial listing only. Call ahead.');
     var fl=[];['CONFLICTING','OUTDATED','POSSIBLY OUTDATED','LOW CONFIDENCE','INDUSTRY ONLY'].forEach(function(x){if(f.indexOf(x)>=0&&!(x==='OUTDATED'&&f.indexOf('POSSIBLY OUTDATED')>=0))fl.push(x.toLowerCase())});
     if(fl.length)h+=flagHtml('<b>Heads up:</b> '+esc(fl.join(' · '))+' — see source notes.');}
   return h;
 }
 function confText(v,k){var c=v[k];
-  if(k==='br'){if(c.conf==='official')return 'Verified on the venue’s own page.';if(c.conf==='snippet')return 'Partially verified from a search-result snippet of the venue/resort page.';if(c.conf==='editorial')return 'Editorial / aggregator listing only.'}
-  if(k==='ln'){var f=c.conf||'';if(/^VERIFIED/.test(f))return 'Verified on the venue/resort official page.';if(/^PARTIALLY/.test(f))return 'Partially verified ('+f+').'}
+  if(k==='br'){if(c.conf==='official')return 'Verified on the venue’s own page.';if(c.conf==='snippet')return 'Partially verified from a search-result snippet of the venue/resort page.';if(c.conf==='editorial')return 'Unverified — editorial / aggregator listing only. Check before you go.'}
+  if(k==='ln'){var f=c.conf||'';if(/^VERIFIED/.test(f))return 'Verified on the venue/resort official page.';if(/^PARTIALLY/.test(f))return 'Partially verified ('+f+').';if(/^UNVERIFIED/.test(f))return 'Unverified — aggregator/editorial listing only. Call ahead.';if(/^DERIVED/.test(f))return 'Derived from a happy hour window starting at 7 PM or later.';}
   return '';
 }
 function itemsHtml(s){
