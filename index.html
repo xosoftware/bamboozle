@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f2937">
+<meta name="description" content="Las Vegas happy hours, brunch, late-night specials and inKind restaurants on a map, sorted nearest-first.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VegasHH">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<title>Vegas Happy Hours</title>
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="vendor/MarkerCluster.css">
+<link rel="stylesheet" href="vendor/MarkerCluster.Default.css">
+<style>
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font:14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#1c1c1e}
+#app{display:flex;height:100%;height:100dvh}
+#side{width:400px;max-width:45vw;display:flex;flex-direction:column;border-right:1px solid #d8d8dc;background:#fafafb;z-index:2}
+#mapwrap{flex:1;position:relative;min-width:0}
+#map{position:absolute;inset:0}
+header{padding:10px 12px 6px;background:#1f2937;color:#fff}
+header h1{font-size:16px;margin:0 0 2px}
+header .sub{font-size:12px;color:#cbd5e1}
+#controls{padding:8px 10px;border-bottom:1px solid #e3e3e7;background:#fff}
+.row{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center}
+input[type=search],select{padding:7px 8px;border:1px solid #c7c7cc;border-radius:8px;font-size:14px;background:#fff;min-width:0}
+input[type=search]{flex:1}
+button{font:inherit;border:1px solid #c7c7cc;background:#fff;border-radius:8px;padding:7px 10px;cursor:pointer}
+button.primary{background:#2563eb;border-color:#2563eb;color:#fff;font-weight:600}
+button.on,.chip.on{background:#f59e0b;border-color:#d97706;color:#1c1c1e;font-weight:600}
+.chip{padding:5px 9px;border-radius:14px;font-size:13px}
+label.chk{display:flex;align-items:center;gap:4px;font-size:13px}
+#status{font-size:12px;color:#555;padding:4px 12px;background:#f2f2f5;border-bottom:1px solid #e3e3e7}
+#list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.item{padding:9px 12px;border-bottom:1px solid #ececf0;cursor:pointer;background:#fff}
+.item:hover,.item.active{background:#fff7e0}
+.item .n{font-weight:600}
+.item .m{font-size:12px;color:#555}
+.item .d{float:right;font-size:12px;font-weight:600;color:#2563eb;margin-left:8px;white-space:nowrap}
+.tag{display:inline-block;font-size:11px;padding:1px 6px;border-radius:8px;background:#fde8c8;color:#92400e;margin-left:4px}
+.tag.now{background:#d1fae5;color:#065f46}
+.pin{width:16px;height:16px;border-radius:50%;border:2px solid #fff;background:#2563eb;box-shadow:0 0 3px rgba(0,0,0,.6)}
+.pin.hh{background:#2563eb}
+.pin.br{background:#db2777}
+.pin.both{background:linear-gradient(90deg,#2563eb 50%,#db2777 50%)}
+.pin.ln{background:#7c3aed}
+.pin.multi3{background:linear-gradient(90deg,#2563eb 33.3%,#db2777 33.3%,#db2777 66.6%,#7c3aed 66.6%)}
+.pin.approx{border:3px dashed #ea580c;box-shadow:0 0 3px rgba(0,0,0,.5)}
+#mode{display:flex;gap:0;margin-bottom:6px;width:100%}
+#mode button{flex:1;border-radius:0;padding:7px 4px;font-size:13px}
+#mode button:first-child{border-radius:8px 0 0 8px}#mode button:last-child{border-radius:0 8px 8px 0}
+#mode button[data-mode=hh].on{background:#2563eb;border-color:#2563eb;color:#fff}
+#mode button[data-mode=br].on{background:#db2777;border-color:#db2777;color:#fff}
+#mode button[data-mode=ln].on{background:#7c3aed;border-color:#7c3aed;color:#fff}
+#mode button[data-mode=all].on{background:linear-gradient(90deg,#2563eb,#db2777,#7c3aed);border-color:#6d28d9;color:#fff}
+.badge{display:inline-block;font-size:11px;padding:1px 6px;border-radius:8px;margin-left:4px;color:#fff;font-weight:600}
+.badge.hh{background:#2563eb}.badge.br{background:#db2777}.badge.ln{background:#7c3aed}
+.tag.warn{background:#fee2e2;color:#991b1b}
+.ik,.leaflet-container a.ik{display:inline-block;font-size:11px;padding:1px 6px;border-radius:8px;margin-left:4px;background:#0f766e;color:#fff;font-weight:700;text-decoration:none}
+.ik.unc,.leaflet-container a.ik.unc{background:#fef3c7;color:#92400e;border:1px solid #f59e0b}
+.pop .iksec{border:1px solid #99f6e4;background:#f0fdfa;border-radius:6px;padding:5px 7px;margin:6px 0;font-size:12px}
+.pop .iksec a.ikbtn,.leaflet-container .pop .iksec a.ikbtn{display:inline-block;margin-top:3px;padding:4px 8px;background:#0f766e;color:#fff;border-radius:6px;text-decoration:none;font-weight:600}
+.pin.ikring{outline:2px solid #0f766e;outline-offset:1px}
+.item .m.c-hh{color:#1d4ed8}.item .m.c-br{color:#be185d}.item .m.c-ln{color:#6d28d9}
+.pop .sec{border-left:4px solid #2563eb;padding:2px 0 2px 8px;margin:8px 0}
+.pop .sec.br{border-left-color:#db2777}
+.pop .sec.ln{border-left-color:#7c3aed}
+.pop .sec h4{margin:0 0 2px;font-size:13px}
+.pop .sec.hh h4{color:#1d4ed8}.pop .sec.br h4{color:#be185d}.pop .sec.ln h4{color:#6d28d9}
+.you{width:18px;height:18px;border-radius:50%;background:#10b981;border:3px solid #fff;box-shadow:0 0 0 3px rgba(16,185,129,.35),0 0 4px #000}
+.pop{max-width:290px;font-size:13px}
+.pop h3{margin:0 0 2px;font-size:15px}
+.pop .k{font-weight:600}
+.pop p{margin:4px 0}
+.pop .warn{background:#fff3e0;border:1px solid #fdba74;border-radius:6px;padding:4px 6px;font-size:12px}
+.pop .note{font-size:11.5px;color:#555}
+.pop .dir{display:inline-block;margin-top:4px;padding:6px 10px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:600}
+.leaflet-popup-content{margin:10px 12px;max-height:55vh;overflow-y:auto}
+#toast{position:absolute;left:50%;top:10px;transform:translateX(-50%);background:#111c;color:#fff;padding:8px 14px;border-radius:10px;z-index:1000;display:none;max-width:90%;text-align:center}
+#viewtoggle{display:none}
+.legend{background:#fff;padding:6px 8px;border-radius:8px;font-size:12px;box-shadow:0 1px 5px rgba(0,0,0,.4)}
+.legend .pin{display:inline-block;vertical-align:middle;margin-right:4px;width:12px;height:12px}
+.legend .pin.approx{border-width:2px}
+@media (max-width:760px){
+ #app{flex-direction:column}
+ #side{width:100%;max-width:none;height:46%;border-right:0;border-top:1px solid #ccc;order:2}
+ #mapwrap{order:1;flex:1}
+ header .sub{display:none}
+ body.listmode #side{height:100%}
+ body.listmode #mapwrap{display:none}
+ #viewtoggle{display:inline-block}
+ #controls{max-height:42%;overflow-y:auto}
+}
+
+header{padding-top:calc(10px + env(safe-area-inset-top))}
+#filtertoggle,#installBtn{display:none}
+#a2hs{display:none;position:absolute;left:8px;right:8px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:1100;background:#111827f0;color:#fff;border-radius:12px;padding:10px 34px 10px 12px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.4)}
+#a2hs b{color:#fcd34d}
+#a2hs .shr{display:inline-block;border:1px solid #fff8;border-radius:4px;padding:0 4px;font-size:12px}
+#a2hsClose{position:absolute;right:4px;top:4px;background:none;border:0;color:#fff;font-size:18px;padding:4px 8px}
+@media (max-width:760px){
+ header{padding:calc(6px + env(safe-area-inset-top)) 10px 4px}
+ header h1{font-size:15px}
+ #filtertoggle{display:inline-block}
+ #controls{max-height:none;overflow:visible}
+ #controls .opt{display:none}
+ body.filtersopen #controls .opt{display:flex}
+ body.filtersopen #controls{max-height:55vh;overflow-y:auto}
+ #side{height:48%}
+ #list{padding-bottom:env(safe-area-inset-bottom)}
+ button,select,input[type=search]{min-height:36px}
+ #controls .row button{padding:6px 8px;font-size:13px}
+ .legend .lt{display:block;font-weight:600;cursor:pointer}
+ .legend>div:not(.lt){display:none}
+ .legend.open>div{display:block}
+}
+.legend .lt{display:none}
+</style></head>
+<body>
+<div id="app">
+ <div id="side">
+  <header><h1>🍸🥂🌙 Las Vegas Happy Hour, Brunch &amp; Late Night</h1><div class="sub" id="sub"></div></header>
+  <div id="controls">
+   <div id="mode" role="group" aria-label="Category"><button data-mode="hh">🍸 Happy hour</button><button data-mode="br">🥂 Brunch</button><button data-mode="ln">🌙 Late night</button><button data-mode="all" class="on">All</button></div>
+   <div class="row"><input type="search" id="q" placeholder="Search venue, area, deal, item…" aria-label="Search">
+     <select id="zip" aria-label="ZIP"><option value="">All ZIPs</option></select></div>
+   <div class="row opt" id="days"></div>
+   <div class="row opt">
+     <button id="now" title="Uses Las Vegas time and the parsed days/times">🟢 Happening now</button>
+     <select id="rating" aria-label="Minimum rating"><option value="0">Any rating</option><option value="3.5">★ 3.5+</option><option value="4">★ 4.0+</option><option value="4.5">★ 4.5+</option></select>
+     <label class="chk"><input type="checkbox" id="exactOnly"> Exact addresses only</label>
+     <label class="chk"><input type="checkbox" id="bothOnly"> Venues on 2+ lists only</label>
+     <label class="chk" title="Venues found in inKind's Las Vegas partner list (checked Oct 9, 2026)"><input type="checkbox" id="ikOnly"> <span class="ik" style="margin:0">inKind</span> On inKind only</label>
+   </div>
+   <div class="row">
+     <button id="loc" class="primary">📍 Use my location</button>
+     <button id="reset">Reset</button>
+     <button id="viewtoggle">☰ List / 🗺 Map</button>
+     <button id="filtertoggle">⚙ Filters</button>
+     <button id="installBtn">⬇ Install app</button>
+   </div>
+  </div>
+  <div id="status"></div>
+  <div id="list"></div>
+ </div>
+ <div id="mapwrap"><div id="map"></div><div id="toast"></div>
+  <div id="a2hs" role="note"><button id="a2hsClose" aria-label="Dismiss">×</button>📲 <b>Install this app:</b> tap <span class="shr">Share ⬆</span> in Safari, then <b>Add to Home Screen</b>.</div></div>
+</div>
+<script src="vendor/leaflet.js"></script>
+<script src="vendor/leaflet.markercluster.js"></script>
+<script src="app.js"></script>
+</body></html>
