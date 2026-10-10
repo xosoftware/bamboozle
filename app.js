@@ -98,15 +98,18 @@ function savedCount(){var n=0;DATA.forEach(function(v){if(isSaved(v))n++});retur
 var state=freshState();state.modes=loadModes();
 var KS=['hh','br','ln'],COL={hh:'var(--hh)',br:'var(--br)',ln:'var(--ln)'};
 function has(v){return KS.filter(function(k){return !!v[k]})}
+/* inKind-only venue: on inKind but no happy hour / brunch / late-night deal found */
+function ikOnlyV(v){return !has(v).length&&!!(v.ik&&v.ik.s==='Yes')}
 function anyMode(){return KS.some(function(k){return state.modes[k]})}
 function cats(v){return anyMode()?KS.filter(function(k){return v[k]&&state.modes[k]}):has(v)}
 function shown(v){return cats(v)}
-function kindOf(v){var c=shown(v);return c.length>1?'multi':c[0]}
+function kindOf(v){var c=shown(v);return c.length>1?'multi':(c[0]||(ikOnlyV(v)?'iko':'hh'))}
 function onIK(v){return !!(v.ik&&v.ik.s==='Yes')}
 function pinBg(v){var c=shown(v);if(c.length===1)return '';
   var st=[],w=100/c.length;c.forEach(function(k,i){st.push(COL[k]+' '+(i*w).toFixed(1)+'% '+((i+1)*w).toFixed(1)+'%')});return ' style="background:conic-gradient('+st.join(',')+')"'}
 function iconFor(v){var k=kindOf(v);
   return L.divIcon({className:'',html:'<div class="mk '+k+(v.approx?' approx':'')+(onIK(v)?' ik':'')+(v.id===activeId?' on':'')+'" data-cats="'+cats(v).join(' ')+'"><i'+pinBg(v)+'></i></div>',iconSize:[28,28],iconAnchor:[14,14]})}
+var IKO_LINE='No deals listed — inKind credit accepted';
 var CATN={hh:'Happy Hour',br:'Brunch',ln:'Late night'},CATL={hh:'Happy Hour',br:'Brunch',ln:'Late night / reverse happy hour'};
 DATA.forEach(function(v,i){v.id=i;
   if(v.lat!=null){
@@ -200,7 +203,10 @@ $('reset').onclick=resetAll;
 function activeFilterCount(){var n=0,k;if(state.zip)n++;if(state.minRating)n++;if(state.exactOnly)n++;if(state.bothOnly)n++;if(state.ikOnly)n++;if(state.savedOnly)n++;if(state.now)n++;for(k in state.days)if(state.days[k])n++;return n}
 
 function passes(v){
-  var act=cats(v);if(!act.length)return false;
+  var act=cats(v),iko=ikOnlyV(v);
+  /* no category selected = show everything (incl. inKind-only spots); with a category selected,
+     inKind-only spots appear only when the inKind chip is on (inKind chip = every inKind venue) */
+  if(!act.length&&!(iko&&(!anyMode()||state.ikOnly)))return false;
   if(state.savedOnly&&!isSaved(v))return false;
   if(state.bothOnly&&has(v).length<2)return false;
   if(state.ikOnly&&!onIK(v))return false;
@@ -210,7 +216,7 @@ function passes(v){
   var anyDay=false,k;for(k in state.days)if(state.days[k])anyDay=true;
   if(anyDay){var ok=false;for(k in state.days)if(state.days[k])act.forEach(function(c){if(v[c].ds.indexOf(+k)>=0)ok=true});if(!ok)return false}
   if(state.now&&!isNow(v))return false;
-  if(state.q){var hay=v.name+' '+v.loc+' '+v.addr+' '+v.zip;
+  if(state.q){var hay=v.name+' '+v.loc+' '+v.addr+' '+v.zip+' '+(v.cu||'')+(iko?' inkind':'');
     act.forEach(function(c){var x=v[c];hay+=' '+(c==='br'?x.spec+' '+(x.bname||''):x.deals)+' '+(x.lname||'')+' '+x.items+' '+x.days+' '+x.times});
     hay=hay.toLowerCase();
     var toks=state.q.split(/\s+/);for(var i=0;i<toks.length;i++)if(hay.indexOf(toks[i])<0)return false}
@@ -247,7 +253,8 @@ function cardHtml(v){
   h+='<div class="r2">'+r2.join(' · ')+'</div>';
   var tk=c.filter(function(x){return present(v[x].times)||present(v[x].days)});
   if(tk.length){h+='<div class="when">'+icon('clock')+'<span>'+tk.slice(0,2).map(function(x){var y=v[x];return (c.length>1?'<span class="c-'+x+'">'+CATN[x].split(' ')[0]+'</span> ':'')+esc([present(y.days)?y.days:'',present(y.times)?firstSeg(y.times):''].filter(Boolean).join(' · '))}).join('  ·  ')+'</span></div>'}
-  var dl=dealLine(v,c[0]);if(dl)h+='<div class="deal">'+priceHL(dl)+'</div>';
+  if(!c.length&&ikOnlyV(v)){if(v.cu)h+='<div class="when">'+icon('info')+'<span>'+esc(v.cu)+'</span></div>';h+='<div class="deal iko">'+esc(IKO_LINE)+'</div>'}
+  else{var dl=c.length?dealLine(v,c[0]):'';if(dl)h+='<div class="deal">'+priceHL(dl)+'</div>';}
   var bd='';if(now)bd+='<span class="b now">Now</span>';
   c.forEach(function(x){bd+='<span class="b '+x+'">'+CATN[x]+'</span>'});
   if(v.ik){if(onIK(v))bd+='<a class="b ik" href="'+esc(INKIND_URL)+'" target="_blank" rel="noopener" title="Open inKind" onclick="event.stopPropagation()">inKind</a>';else bd+='<span class="b ik unc">inKind?</span>';}
@@ -340,13 +347,13 @@ function secHtml(v,k){
 }
 function ikHtml(v){
   var i=v.ik;
-  if(!i)return '<p class="foot-note">Not found in inKind’s Las Vegas list (checked Oct 9, 2026) — not proof it isn’t on inKind.</p>';
+  if(!i)return '<p class="foot-note">Not found in inKind’s Las Vegas list (checked Oct 10, 2026) — not proof it isn’t on inKind.</p>';
   var h='<div class="dsec"><div class="panel ikp"><div class="ph"><span class="pi">'+icon('gift')+'</span><h4>'+(i.s==='Yes'?'On inKind':'Possibly on inKind')+'<small>'+(i.s==='Yes'?'Pay with inKind credit for bonus value':'Unclear match — check the app')+'</small></h4></div>';
   if(present(i.note))h+='<p class="muted">'+esc(i.note)+'</p>';
   return h+'</div></div>';
 }
 function detailHtml(v){
-  var hv=has(v),act=cats(v),k=act.length>1?'multi':(act[0]||hv[0]),d=dist(v);
+  var hv=has(v),act=cats(v),k=act.length>1?'multi':(act[0]||hv[0]||'iko'),d=dist(v);
   var h='<div class="hero '+k+'"><div class="kicker">';
   if(isNow(v))h+='<span><span class="live" style="background:#fff"></span>Happening now</span>';
   hv.forEach(function(x){h+='<span>'+icon(x)+CATN[x]+'</span>'});
@@ -367,6 +374,7 @@ function detailHtml(v){
   h+='<div class="dsec"><div class="addr">'+icon('pin')+'<div>'+esc(v.addr)+(v.approx?'<div class="muted" style="font-size:12.5px;margin-top:2px">Approximate pin ('+esc(v.q)+') — not a verified street location.</div>':'')+'</div></div></div>';
   var ks=KS.slice();ks.sort(function(a,b){return (act.indexOf(b)>=0)-(act.indexOf(a)>=0)});
   ks.forEach(function(x){h+=secHtml(v,x)});
+  if(!hv.length)h+='<div class="dsec"><div class="panel cat iko"><div class="ph"><span class="pi">'+icon('gift')+'</span><h4>'+esc(IKO_LINE)+(v.cu?'<small>'+esc(v.cu)+'</small>':'')+'</h4></div><p class="muted">We didn’t find a published happy hour, brunch special or late-night deal for this spot'+(v.dchk?' ('+esc(v.dchk)+')':'')+'. It’s listed because it accepts inKind credit.</p></div></div>';
   h+=ikHtml(v);
   if(v.rating!=null&&v.src)h+='<p class="foot-note">Rating: '+esc(v.src)+'. Deals and prices change often — confirm before you go.</p>';
   else h+='<p class="foot-note">Deals and prices change often — confirm before you go.</p>';
@@ -399,9 +407,10 @@ function closeDetail(){
 $('dClose').onclick=closeDetail;
 function shareText(v){
   var c=cats(v),k=c[0]||has(v)[0],x=v[k]||{},parts=[v.name+(present(v.loc)?' ('+v.loc+')':'')];
+  if(!k){parts.push(IKO_LINE)}else{
   var when=[present(x.days)?x.days:'',present(x.times)?firstSeg(x.times):''].filter(Boolean).join(' · ');
   parts.push(CATN[k]+(when?': '+when:''));
-  var dl=dealLine(v,k);if(dl)parts.push(dl.length>180?dl.slice(0,177)+'…':dl);
+  var dl=dealLine(v,k);if(dl)parts.push(dl.length>180?dl.slice(0,177)+'…':dl);}
   parts.push(v.addr);
   return parts.join('\n');
 }
@@ -535,9 +544,9 @@ $('loc').onclick=function(){
 };
 
 var nHH=DATA.filter(function(v){return v.hh}).length,nBR=DATA.filter(function(v){return v.br}).length,nLN=DATA.filter(function(v){return v.ln}).length,nBoth=DATA.filter(function(v){return has(v).length>1}).length;
-var nIK=DATA.filter(onIK).length,nApx=DATA.filter(function(v){return v.approx}).length;
-$('sub').textContent=DATA.length+' spots · happy hour, brunch & late night';
-$('about').textContent=DATA.length+' venues: '+nHH+' happy hour, '+nBR+' brunch, '+nLN+' late night ('+nBoth+' on 2+ lists), '+nIK+' on inKind, '+nApx+' approximate pins. Late-night windows after midnight belong to the previous evening. Times use Las Vegas time. Data gathered from venue sites and third-party guides (Oct 2026) — many entries are unverified; confirm before you go.';
+var nIK=DATA.filter(onIK).length,nIKO=DATA.filter(ikOnlyV).length,nApx=DATA.filter(function(v){return v.approx}).length;
+$('sub').textContent=DATA.length+' spots · happy hour, brunch, late night & inKind';
+$('about').textContent=DATA.length+' venues: '+nHH+' happy hour, '+nBR+' brunch, '+nLN+' late night ('+nBoth+' on 2+ lists), '+nIK+' on inKind ('+nIKO+' of them inKind-only, with no deal listed), '+nApx+' approximate pins. Late-night windows after midnight belong to the previous evening. Times use Las Vegas time. Data gathered from venue sites and third-party guides (Oct 2026) — many entries are unverified; confirm before you go.';
 modeBtns.forEach(function(b){var m=b.getAttribute('data-mode'),n={hh:nHH,br:nBR,ln:nLN}[m];b.title=n+' venues · tap to toggle';b.setAttribute('aria-label',({hh:'Happy Hour',br:'Brunch',ln:'Late night'})[m]+' ('+n+')')});
 layout();setSheet('half',true);
 refresh();syncRating();
@@ -598,7 +607,7 @@ setTimeout(openFromHash,300);
   if(seen)return;var d=$('disc');if(!d)return;d.hidden=false;document.body.classList.add('disc-on');
   $('discOk').onclick=function(){d.hidden=true;document.body.classList.remove('disc-on');try{localStorage.setItem('bbDisclaimer','1')}catch(e){}}})();
 syncSaved();
-window.__vhh={nIK:nIK,saved:function(){return savedCount()},toggleSave:function(id){toggleSave(DATA[id])},savedOnly:function(on){state.savedOnly=!!on;syncSaved();refresh();return visible.length},alertPlan:function(now,days){return alertPlan(now,days).map(function(x){return {name:x.v.name,k:x.k,at:x.at,start:x.start}})},shareText:function(id){return shareText(DATA[id])},count:DATA.length,nHH:nHH,nBR:nBR,nLN:nLN,nBoth:nBoth,setNow:function(d,m){NOW_OVERRIDE=(d==null?null:{day:d,min:m});refresh()},nowCount:function(){return DATA.filter(function(v){return isNow(v)}).length},isNowC:function(c){return isNowC(c)},markers:function(){return Object.keys(markers).length},visible:function(){return visible.length},onMap:function(){return cluster.getLayers().length},modes:function(){return {hh:!!state.modes.hh,br:!!state.modes.br,ln:!!state.modes.ln}},setModes:function(m){if(!m||typeof m!=='object')return;state.modes={hh:!!m.hh,br:!!m.br,ln:!!m.ln};saveModes();syncMode();refresh()},open:function(id){openDetail(id,{fromList:true})},close:closeDetail,sheet:function(s){if(s)setSheet(s);return sheetState},find:function(n){for(var i=0;i<DATA.length;i++)if(DATA[i].name===n)return i;return -1}};
+window.__vhh={nIK:nIK,nIKO:nIKO,ikOnly:function(on){state.ikOnly=!!on;syncIK();refresh();return visible.length},saved:function(){return savedCount()},toggleSave:function(id){toggleSave(DATA[id])},savedOnly:function(on){state.savedOnly=!!on;syncSaved();refresh();return visible.length},alertPlan:function(now,days){return alertPlan(now,days).map(function(x){return {name:x.v.name,k:x.k,at:x.at,start:x.start}})},shareText:function(id){return shareText(DATA[id])},count:DATA.length,nHH:nHH,nBR:nBR,nLN:nLN,nBoth:nBoth,setNow:function(d,m){NOW_OVERRIDE=(d==null?null:{day:d,min:m});refresh()},nowCount:function(){return DATA.filter(function(v){return isNow(v)}).length},isNowC:function(c){return isNowC(c)},markers:function(){return Object.keys(markers).length},visible:function(){return visible.length},onMap:function(){return cluster.getLayers().length},modes:function(){return {hh:!!state.modes.hh,br:!!state.modes.br,ln:!!state.modes.ln}},setModes:function(m){if(!m||typeof m!=='object')return;state.modes={hh:!!m.hh,br:!!m.br,ln:!!m.ln};saveModes();syncMode();refresh()},open:function(id){openDetail(id,{fromList:true})},close:closeDetail,sheet:function(s){if(s)setSheet(s);return sheetState},find:function(n){for(var i=0;i<DATA.length;i++)if(DATA[i].name===n)return i;return -1}};
 }
 
 (function(){

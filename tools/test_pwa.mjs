@@ -10,7 +10,13 @@ const DATA = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)
 const union = (...keys) => DATA.filter(v => keys.some(k => v[k])).length;
 const b = await chromium.launch({executablePath:'/opt/google/chrome/chrome', headless:true, args:['--no-sandbox','--disable-dev-shm-usage']});
 let fails = 0; const ok = (c, msg) => { console.log((c ? 'PASS ' : 'FAIL ') + msg); if (!c) fails++; };
-const EXPECT = {n:738, markers:733, nHH:657, nBR:110, nLN:176, nIK:76};
+const onIK = v => !!(v.ik && v.ik.s === 'Yes');
+const isIKO = v => !v.hh && !v.br && !v.ln && onIK(v);
+const N = DATA.length, NM = DATA.filter(v => v.lat != null).length;
+const NHH = DATA.filter(v => v.hh).length, NBR = DATA.filter(v => v.br).length, NLN = DATA.filter(v => v.ln).length;
+const NIK = DATA.filter(onIK).length, NIKO = DATA.filter(isIKO).length;
+const EXPECT = {n:N, markers:NM, nHH:NHH, nBR:NBR, nLN:NLN, nIK:NIK, nIKO:NIKO};
+console.log('expect', JSON.stringify(EXPECT));
 
 async function session(ctxOpts, fn, init) {
   const ctx = await b.newContext({...ctxOpts, geolocation:{latitude:36.1070, longitude:-115.1760}, permissions:['geolocation']});
@@ -30,9 +36,9 @@ const modePressed = async (p) => p.evaluate(() => Object.fromEntries([...documen
 
 // ---------------- mobile (iPhone 13) ----------------
 if (!process.env.ONLY_NEW) await session(devices['iPhone 13'], async (p, ctx) => {
-  const c = await p.evaluate(() => ({n:__vhh.count, nIK:__vhh.nIK, nHH:__vhh.nHH, nBR:__vhh.nBR, nLN:__vhh.nLN, markers:__vhh.markers()}));
+  const c = await p.evaluate(() => ({n:__vhh.count, nIK:__vhh.nIK, nIKO:__vhh.nIKO, nHH:__vhh.nHH, nBR:__vhh.nBR, nLN:__vhh.nLN, markers:__vhh.markers()}));
   for (const k in EXPECT) ok(c[k] === EXPECT[k], `count ${k}=${c[k]} (expect ${EXPECT[k]})`);
-  ok((await st(p)).vis === 738 && (await st(p)).onMap === 733, 'all 738 listed / 733 pins on map at start');
+  ok((await st(p)).vis === N && (await st(p)).onMap === NM, `all ${N} listed / ${NM} pins on map at start`);
   const sw = await p.evaluate(async () => { const r = await navigator.serviceWorker.ready; return !!r.active; }); ok(sw, 'service worker active');
   const man = await p.evaluate(async () => { const m = await (await fetch('manifest.webmanifest')).json(); return {d:m.display, n:m.icons.length, name:m.name, short:m.short_name}; });
   ok(man.d === 'standalone' && man.n === 4, 'manifest ' + man.d + ' ' + man.n);
@@ -51,7 +57,7 @@ if (!process.env.ONLY_NEW) await session(devices['iPhone 13'], async (p, ctx) =>
   ok(await p.evaluate(() => document.getElementById('mode').classList.contains('cats') && document.getElementById('mode').getAttribute('role')==='group'), 'mode is cats group');
   let pressed = await modePressed(p);
   ok(!pressed.hh && !pressed.br && !pressed.ln, 'none selected by default (show all) ' + JSON.stringify(pressed));
-  ok((await st(p)).vis === 738, 'none selected -> 738');
+  ok((await st(p)).vis === N, 'none selected -> all');
   ok(await p.evaluate(() => (document.getElementById('status').textContent || '').includes('All categories')), 'status says All categories');
   ok(await p.evaluate(() => {
     const btns = [...document.querySelectorAll('#mode button')];
@@ -73,7 +79,7 @@ if (!process.env.ONLY_NEW) await session(devices['iPhone 13'], async (p, ctx) =>
     return !!card;
   }), 'card badge text Happy Hour');
   const KS_OK = (pr, keep) => ['hh','br','ln'].every(k => pr[k] === (k===keep));
-  for (const [m, n] of [['hh',657],['br',110],['ln',176]]) {
+  for (const [m, n] of [['hh',NHH],['br',NBR],['ln',NLN]]) {
     const only = {hh:false,br:false,ln:false}; only[m]=true;
     const s = await setModes(p, only);
     pressed = await modePressed(p);
@@ -90,7 +96,7 @@ if (!process.env.ONLY_NEW) await session(devices['iPhone 13'], async (p, ctx) =>
   await setModes(p, {hh:true,br:false,ln:false});
   await p.click('#mode button[data-mode=hh]'); await p.waitForTimeout(300);
   pressed = await modePressed(p);
-  ok(!pressed.hh && !pressed.br && !pressed.ln && (await st(p)).vis === 738, 'deselect all returns to all categories ' + JSON.stringify(pressed));
+  ok(!pressed.hh && !pressed.br && !pressed.ln && (await st(p)).vis === N, 'deselect all returns to all categories ' + JSON.stringify(pressed));
   // persist a partial selection
   await setModes(p, {hh:false,br:true,ln:true});
   const stored = await p.evaluate(() => localStorage.getItem('vhhModes'));
@@ -102,23 +108,43 @@ if (!process.env.ONLY_NEW) await session(devices['iPhone 13'], async (p, ctx) =>
   await p.evaluate(() => localStorage.setItem('vhhModes', JSON.stringify({hh:true,br:true,ln:true})));
   await p.reload({waitUntil:'networkidle'}); await p.waitForFunction(() => window.__vhh, null, {timeout:30000});
   pressed = await modePressed(p);
-  ok(!pressed.hh && !pressed.br && !pressed.ln && (await st(p)).vis === 738, 'migrate all-on storage → none selected');
+  ok(!pressed.hh && !pressed.br && !pressed.ln && (await st(p)).vis === N, 'migrate all-on storage → none selected');
   // reset clears selection
   await setModes(p, {hh:true,br:false,ln:false});
   await p.click('#filtertoggle'); await p.waitForTimeout(400);
   await p.click('#reset'); await p.waitForTimeout(400);
   pressed = await modePressed(p);
-  ok(!pressed.hh && !pressed.br && !pressed.ln && (await st(p)).vis === 738, 'reset clears category selection');
+  ok(!pressed.hh && !pressed.br && !pressed.ln && (await st(p)).vis === N, 'reset clears category selection');
   await p.click('#fApply').catch(()=>{}); await p.waitForTimeout(300);
   // leave none selected (show all) for remaining tests
   await setModes(p, {hh:false,br:false,ln:false});
-  await p.click('#ikChip'); await p.waitForTimeout(250); ok((await st(p)).vis === 76, 'inKind chip -> ' + (await st(p)).vis);
+  await p.click('#ikChip'); await p.waitForTimeout(250); ok((await st(p)).vis === NIK, 'inKind chip -> ' + (await st(p)).vis + ' (expect ' + NIK + ')');
+  // inKind-only venues: shown with no category selected, hidden when a category is selected unless inKind chip on
   await p.click('#ikChip'); await p.waitForTimeout(250);
+  if (NIKO > 0) {
+    let s1 = await setModes(p, {hh:true,br:false,ln:false});
+    ok(s1.vis === NHH, `hh selected hides inKind-only -> ${s1.vis} (expect ${NHH})`);
+    await p.click('#ikChip'); await p.waitForTimeout(300);
+    const expHHik = DATA.filter(v => onIK(v) && (v.hh || isIKO(v))).length;
+    s1 = await st(p);
+    ok(s1.vis === expHHik, `hh + inKind chip -> ${s1.vis} (expect ${expHHik}: inKind HH spots + inKind-only)`);
+    await p.click('#ikChip'); await p.waitForTimeout(250);
+    await setModes(p, {hh:false,br:false,ln:false});
+    const iko = DATA.findIndex(isIKO);
+    await p.fill('#q', DATA[iko].name); await p.waitForTimeout(500);
+    ok(await p.evaluate(n => [...document.querySelectorAll('#list .card')].some(c => c.querySelector('h3').textContent === n && /No deals listed — inKind credit accepted/.test(c.textContent) && !!c.querySelector('.badges .b.ik')), DATA[iko].name), 'inKind-only card shows No deals listed + inKind badge');
+    await p.evaluate(i => __vhh.open(i), iko); await p.waitForTimeout(700);
+    ok(await p.evaluate(() => /No deals listed — inKind credit accepted/.test(document.getElementById('dBody').textContent) && !!document.querySelector('#dBody .hero.iko') && !!document.querySelector('#dBody a.btn.teal')), 'inKind-only detail sheet (gold hero, Open on inKind)');
+    await p.click('#dClose'); await p.waitForTimeout(400);
+    await p.click('#qclear'); await p.waitForTimeout(400);
+    const goldPins = await p.evaluate(() => { const st = getComputedStyle(document.documentElement); const el = document.createElement('div'); el.className = 'mk iko'; el.innerHTML = '<i></i>'; document.body.appendChild(el); const c = getComputedStyle(el.querySelector('i')).backgroundColor; el.remove(); return c; });
+    ok(goldPins === 'rgb(230, 184, 74)', 'inKind-only marker dot is gold #e6b84a (' + goldPins + ')');
+  }
   await p.evaluate(() => __vhh.setNow(1, 90)); // Tue 1:30 AM Vegas time
   await p.click('#now'); await p.waitForTimeout(250); const lateNow = (await st(p)).vis; ok(lateNow > 0, 'happening now (Tue 1:30 AM) -> ' + lateNow);
   await p.click('#now'); await p.evaluate(() => __vhh.setNow(null)); await p.waitForTimeout(250);
-  await p.click('#r4Chip'); await p.waitForTimeout(250); const r4 = (await st(p)).vis; ok(r4 > 0 && r4 < 738, 'rating 4.0+ -> ' + r4); await p.click('#r4Chip');
-  await p.click('#days .chip:nth-child(1)'); await p.waitForTimeout(250); const mon = (await st(p)).vis; ok(mon > 0 && mon < 738, 'Mon chip -> ' + mon); await p.click('#days .chip:nth-child(1)');
+  await p.click('#r4Chip'); await p.waitForTimeout(250); const r4 = (await st(p)).vis; ok(r4 > 0 && r4 < N, 'rating 4.0+ -> ' + r4); await p.click('#r4Chip');
+  await p.click('#days .chip:nth-child(1)'); await p.waitForTimeout(250); const mon = (await st(p)).vis; ok(mon > 0 && mon < N, 'Mon chip -> ' + mon); await p.click('#days .chip:nth-child(1)');
   await p.fill('#q', 'oyster'); await p.waitForTimeout(500); const oy = (await st(p)).vis; ok(oy > 0 && oy < 100, 'search oyster -> ' + oy);
   await p.click('#qclear'); await p.waitForTimeout(400);
   // filters sheet
@@ -126,10 +152,10 @@ if (!process.env.ONLY_NEW) await session(devices['iPhone 13'], async (p, ctx) =>
   ok(await p.isVisible('#filters'), 'filters sheet opens');
   await p.click('label.switch:has(#bothOnly)'); await p.waitForTimeout(250); const both = (await st(p)).vis; ok(both === await p.evaluate(() => __vhh.nBoth), 'on 2+ lists -> ' + both);
   await p.click('label.switch:has(#bothOnly)');
-  await p.click('label.switch:has(#exactOnly)'); await p.waitForTimeout(250); const ex = (await st(p)).vis; ok(ex < 738, 'exact addresses only -> ' + ex);
+  await p.click('label.switch:has(#exactOnly)'); await p.waitForTimeout(250); const ex = (await st(p)).vis; ok(ex < N, 'exact addresses only -> ' + ex);
   await p.click('label.switch:has(#exactOnly)');
   await p.selectOption('#zip', '89158'); await p.waitForTimeout(250); const z = (await st(p)).vis; ok(z > 0 && z < 60, 'zip 89158 -> ' + z);
-  await p.click('#reset'); await p.waitForTimeout(400); ok((await st(p)).vis === 738, 'reset -> 738');
+  await p.click('#reset'); await p.waitForTimeout(400); ok((await st(p)).vis === N, 'reset -> all');
   await p.click('#fApply'); await p.waitForTimeout(500);
   // empty state
   await p.fill('#q', 'zzzxxyy'); await p.waitForTimeout(500); ok(await p.isVisible('.empty'), 'empty state shown'); await p.click('#emptyReset'); await p.waitForTimeout(400);
@@ -212,7 +238,7 @@ if (!process.env.ONLY_NEW) await session(devices['iPhone 13'], async (p, ctx) =>
   await ctx.setOffline(true);
   await p.reload({waitUntil:'load'}); await p.waitForFunction(() => window.__vhh, null, {timeout:20000}).catch(() => {});
   const off = await p.evaluate(() => window.__vhh ? {n:__vhh.count, markers:__vhh.markers()} : null);
-  ok(off && off.n === 738 && off.markers === 733, 'offline reload works ' + JSON.stringify(off));
+  ok(off && off.n === N && off.markers === NM, 'offline reload works ' + JSON.stringify(off));
   await ctx.setOffline(false);
 });
 
@@ -227,7 +253,7 @@ await session(devices['iPhone 13'], async (p, ctx) => {
   await p.click('#savedChip'); await p.waitForTimeout(300);
   ok((await st(p)).vis === 0 && await p.isVisible('.empty') && /No saved spots/.test(await p.textContent('.empty h3')), 'Saved filter empty state');
   await p.click('#emptyReset'); await p.waitForTimeout(300);
-  ok((await st(p)).vis === 738 && await p.evaluate(() => document.getElementById('savedChip').getAttribute('aria-pressed')) === 'false', 'empty-state reset clears Saved filter');
+  ok((await st(p)).vis === N && await p.evaluate(() => document.getElementById('savedChip').getAttribute('aria-pressed')) === 'false', 'empty-state reset clears Saved filter');
   const id = await p.evaluate(() => __vhh.find('Bardot Brasserie'));
   await p.evaluate(i => __vhh.open(i), id); await p.waitForTimeout(900);
   ok(await p.isVisible('#dSave') && await p.isVisible('#dShare'), 'detail has Save + Share');
@@ -261,9 +287,9 @@ await session(devices['iPhone 13'], async p => {
 // ---------------- desktop ----------------
 await session({viewport:{width:1440, height:900}, deviceScaleFactor:2}, async p => {
   const c = await p.evaluate(() => ({n:__vhh.count, markers:__vhh.markers(), nIK:__vhh.nIK}));
-  ok(c.n === 738 && c.markers === 733 && c.nIK === 76, 'desktop counts ' + JSON.stringify(c));
-  ok((await st(p)).vis === 738, 'desktop none selected -> 738');
-  for (const [m, n] of [['hh',657],['br',110],['ln',176]]) {
+  ok(c.n === N && c.markers === NM && c.nIK === NIK, 'desktop counts ' + JSON.stringify(c));
+  ok((await st(p)).vis === N, 'desktop none selected -> all');
+  for (const [m, n] of [['hh',NHH],['br',NBR],['ln',NLN]]) {
     const only = {hh:false,br:false,ln:false}; only[m]=true;
     const s = await setModes(p, only);
     ok(s.vis === n, `desktop only ${m}: ${s.vis}`);
