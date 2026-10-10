@@ -156,6 +156,7 @@ button{cursor:pointer;background:none;border:0;padding:0}
 .b.br{background:color-mix(in srgb,var(--br) 18%,transparent);color:var(--br-fg)}
 .b.ln{background:color-mix(in srgb,var(--ln) 20%,transparent);color:var(--ln-fg)}
 .b.ik{background:#e6b84a;color:#000}
+a.b.ik{text-decoration:none;color:#000}
 .b.ik.unc{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn-fg)}
 .b.now{background:color-mix(in srgb,var(--now) 20%,transparent);color:var(--now-fg)}
 .b.now::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--now)}

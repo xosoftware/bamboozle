@@ -191,6 +191,20 @@ if (!process.env.ONLY_NEW) await session(devices['iPhone 13'], async (p, ctx) =>
   ok(await p.evaluate(() => !!document.querySelector('#dBody a.btn.primary[href*="google.com/maps/dir"]')), 'directions button present');
   await p.screenshot({path: DIR + '/redesign_mobile_detail.png'});
   await p.click('#dClose'); await p.waitForTimeout(500); ok(!(await p.isVisible('#detail.show')), 'detail closes');
+  // inKind referral link (Open on inKind + card badge)
+  const bin = await p.evaluate(() => __vhh.find('18 Bin'));
+  ok(bin >= 0, '18 Bin present for inKind referral check');
+  await p.evaluate(i => __vhh.open(i), bin);
+  await p.waitForTimeout(800);
+  ok(await p.evaluate(() => {
+    const a = document.querySelector('#dBody a.btn.teal[href]');
+    return !!a && a.href === 'https://app.inkind.com/refer/VMDEOCC5' && /Open on inKind/i.test(a.textContent);
+  }), 'Open on inKind uses referral URL');
+  await p.click('#dClose'); await p.waitForTimeout(400);
+  ok(await p.evaluate(() => {
+    const a = [...document.querySelectorAll('#list .card .badges a.b.ik')].find(e => e.textContent.trim()==='inKind');
+    return !!a && a.href === 'https://app.inkind.com/refer/VMDEOCC5';
+  }), 'card inKind badge links to referral URL');
   // offline reload
   await p.reload({waitUntil:'networkidle'}); await p.waitForTimeout(1500);
   ok(await p.evaluate(() => !!navigator.serviceWorker.controller), 'page controlled by SW');

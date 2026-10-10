@@ -15,6 +15,7 @@ var BB=window.BB||{isNative:false,platform:'web',haptic:function(){},setTheme:fu
   notif:{supported:function(){return false}},dirUrl:null,openExternal:function(u){window.open(u,'_blank','noopener')},
   getPosition:function(){return new Promise(function(res,rej){if(!navigator.geolocation){var e=new Error('unsupported');e.code=0;rej(e);return}navigator.geolocation.getCurrentPosition(function(p){res([p.coords.latitude,p.coords.longitude])},rej,{enableHighAccuracy:true,timeout:15000,maximumAge:60000})})}};
 var SITE='https://xosoftware.github.io/bamboozle/';
+var INKIND_URL='https://app.inkind.com/refer/VMDEOCC5';
 
 /* ---------- map + theme ---------- */
 var map=L.map('map',{maxZoom:20,minZoom:3,zoomControl:false,attributionControl:false,tap:true}).setView(STRIP,11);
@@ -249,7 +250,7 @@ function cardHtml(v){
   var dl=dealLine(v,c[0]);if(dl)h+='<div class="deal">'+priceHL(dl)+'</div>';
   var bd='';if(now)bd+='<span class="b now">Now</span>';
   c.forEach(function(x){bd+='<span class="b '+x+'">'+CATN[x]+'</span>'});
-  if(v.ik)bd+='<span class="b ik'+(onIK(v)?'':' unc')+'">'+(onIK(v)?'inKind':'inKind?')+'</span>';
+  if(v.ik){if(onIK(v))bd+='<a class="b ik" href="'+esc(INKIND_URL)+'" target="_blank" rel="noopener" title="Open inKind" onclick="event.stopPropagation()">inKind</a>';else bd+='<span class="b ik unc">inKind?</span>';}
   if(v.approx)bd+='<span class="b muted" title="'+esc(v.q)+'">Approx. pin</span>';
   h+='<div class="badges">'+bd+'</div>';
   return h+'</div></article>';
@@ -340,7 +341,6 @@ function secHtml(v,k){
 function ikHtml(v){
   var i=v.ik;
   if(!i)return '<p class="foot-note">Not found in inKind’s Las Vegas list (checked Oct 9, 2026) — not proof it isn’t on inKind.</p>';
-  var u=safeUrl(i.url);
   var h='<div class="dsec"><div class="panel ikp"><div class="ph"><span class="pi">'+icon('gift')+'</span><h4>'+(i.s==='Yes'?'On inKind':'Possibly on inKind')+'<small>'+(i.s==='Yes'?'Pay with inKind credit for bonus value':'Unclear match — check the app')+'</small></h4></div>';
   if(present(i.note))h+='<p class="muted">'+esc(i.note)+'</p>';
   return h+'</div></div>';
@@ -362,7 +362,7 @@ function detailHtml(v){
   h+='<div class="actions"><a class="btn primary" href="'+esc(dirUrl(v))+'" target="_blank" rel="noopener" data-ext="maps">'+icon('nav')+'Directions</a>';
   h+='<button type="button" class="btn ghost sq'+(sv?' saved':'')+'" id="dSave" aria-pressed="'+sv+'" aria-label="'+(sv?'Remove from saved':'Save this spot')+'">'+icon(sv?'heart-f':'heart')+'<span>'+(sv?'Saved':'Save')+'</span></button>';
   if(BB.canShare())h+='<button type="button" class="btn ghost sq" id="dShare" aria-label="Share this spot">'+icon('share')+'<span>Share</span></button>';
-  var iu=v.ik&&safeUrl(v.ik.url);if(iu)h+='<a class="btn teal wide" href="'+esc(iu)+'" target="_blank" rel="noopener">'+icon('gift')+'Open on inKind</a>';
+  if(onIK(v))h+='<a class="btn teal wide" href="'+esc(INKIND_URL)+'" target="_blank" rel="noopener">'+icon('gift')+'Open on inKind</a>';
   h+='</div>';
   h+='<div class="dsec"><div class="addr">'+icon('pin')+'<div>'+esc(v.addr)+(v.approx?'<div class="muted" style="font-size:12.5px;margin-top:2px">Approximate pin ('+esc(v.q)+') — not a verified street location.</div>':'')+'</div></div></div>';
   var ks=KS.slice();ks.sort(function(a,b){return (act.indexOf(b)>=0)-(act.indexOf(a)>=0)});
